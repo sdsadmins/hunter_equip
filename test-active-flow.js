@@ -1,6 +1,7 @@
 // Test the complete data flow for active status
 console.log("=== Testing Active Status Data Flow ===\n");
 
+
 // 1. Simulate crane data from database
 const originalCrane = {
   _id: "test123",
