@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import CraneTable from "../components/CraneTable";
-import AddEditCraneModal from "./AddEditCraneModal";
 import { useNavigate } from "react-router-dom";
 import ExcelUpload from "../components/ExcelUpload";
 
@@ -12,8 +11,8 @@ import "./SupervisorDashboard.css";
 export default function SupervisorDashboard() {
   const [cranes, setCranes] = useState([]);
   const [filterValue, setFilterValue] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editingCrane, setEditingCrane] = useState(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [alertSummary, setAlertSummary] = useState({ expired: 0, expiring: 0 });
   const navigate = useNavigate();
 
   const fetchCranes = async () => {
@@ -25,27 +24,33 @@ export default function SupervisorDashboard() {
       
       setCranes(res.data);
 
-      // Auto send alerts for expiring cranes (<= 4 days)
+      // Calculate alert summary
       const today = new Date();
-      res.data.forEach(async (crane) => {
+      let expiredCount = 0;
+      let expiringCount = 0;
+      
+      res.data.forEach((crane) => {
         try {
-          const expDate = new Date(crane.Expiration);
+          // Convert Excel date if needed
+          const expirationDate = convertExcelDate(crane.Expiration);
+          const expDate = new Date(expirationDate);
           const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-          if (diffDays > 0 && diffDays <= 4) {
-          try {
-                         await axios.post(
-               `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
-              {},
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-                      } catch (err) {
-              console.warn(`Auto email failed for ${crane["Unit #"]}`);
-            }
+          
+          console.log(`Crane ${crane["Unit #"]}: Original=${crane.Expiration}, Converted=${expirationDate}, DiffDays=${diffDays}`);
+          
+          if (diffDays < 0) {
+            expiredCount++;
+          } else if (diffDays > 0 && diffDays <= 30) {
+            expiringCount++;
           }
         } catch (error) {
           console.warn(`Invalid date format for crane ${crane["Unit #"]}: ${crane.Expiration}`);
         }
       });
+      
+      setAlertSummary({ expired: expiredCount, expiring: expiringCount });
+      console.log(`Alert Summary: ${expiredCount} expired, ${expiringCount} expiring within 30 days`);
+      console.log(`Loaded ${res.data.length} cranes successfully`);
     } catch (err) {
       console.error("Error fetching cranes", err);
       if (err.response?.status === 401) {
@@ -57,12 +62,22 @@ export default function SupervisorDashboard() {
 
   useEffect(() => {
     fetchCranes();
+    
+    // Set up auto-refresh every 30 seconds for real-time alerts
+    const interval = setInterval(() => {
+      fetchCranes();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleEdit = (crane) => {
-    setEditingCrane(crane);
-    setShowModal(true);
+    // Open edit page in new tab with crane data
+    const craneData = encodeURIComponent(JSON.stringify(crane));
+    window.open(`/edit-crane?data=${craneData}`, '_blank');
   };
+
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this crane?")) return;
@@ -73,41 +88,7 @@ export default function SupervisorDashboard() {
     fetchCranes();
   };
 
-  const handleSaveCrane = async (craneData) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("You are not logged in. Please log in again.");
-        return;
-      }
 
-      if (editingCrane) {
-        // Update existing crane
-        await axios.put(`${config.API_URL}/api/cranes/${editingCrane._id}`, craneData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        
-        alert("✅ Crane updated successfully!");
-      } else {
-        // Add new crane
-        await axios.post(`${config.API_URL}/api/cranes`, craneData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("✅ New crane added successfully!");
-      }
-      
-      // Add a small delay to ensure the database update is complete
-      setTimeout(() => {
-        fetchCranes();
-      }, 100);
-      setShowModal(false);
-      setEditingCrane(null);
-    } catch (error) {
-      console.error("Error saving crane:", error);
-      const errorMessage = error.response?.data?.error || "Failed to save crane. Please try again.";
-      alert(`❌ Error: ${errorMessage}`);
-    }
-  };
 const handleEmailAlert = async (id, expiration) => {
   const token = localStorage.getItem("token");
   
@@ -161,6 +142,67 @@ const handleEmailAlert = async (id, expiration) => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     navigate("/");
+  };
+
+  const handleEmailAlertClick = () => {
+    // This prevents the dropdown from closing when clicking the email icon
+  };
+
+  const handleSendEmailAlert = async () => {
+    // Show crane selection dialog
+    const craneOptions = cranes.map(crane => `${crane["Unit #"]} - ${crane["Make and Model"]}`).join('\n');
+    const selectedCrane = prompt(`Select a crane to send email alert:\n\n${craneOptions}\n\nEnter the Unit # of the crane:`);
+    
+    if (!selectedCrane) return;
+    
+    const crane = cranes.find(c => c["Unit #"] === selectedCrane.trim());
+    if (!crane) {
+      alert("❌ Crane not found. Please enter a valid Unit #.");
+      return;
+    }
+    
+    // Get recipient email
+    const recipientEmail = prompt(`Enter recipient email for crane ${crane["Unit #"]}:`);
+    if (!recipientEmail) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
+        { recipientEmail },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`✅ Email alert sent successfully for crane ${crane["Unit #"]}!`);
+    } catch (error) {
+      console.error("Error sending email alert:", error);
+      alert(`❌ Failed to send email alert: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
+  const handleSendSummaryReport = async () => {
+    const recipientEmail = prompt("Enter recipient email for summary report:");
+    if (!recipientEmail) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const reportData = {
+        recipientEmail,
+        totalCranes: cranes.length,
+        expiredCount: alertSummary.expired,
+        expiringCount: alertSummary.expiring,
+        summary: `Crane Management Summary:\n- Total Cranes: ${cranes.length}\n- Expired: ${alertSummary.expired}\n- Expiring This Month: ${alertSummary.expiring}`
+      };
+      
+      await axios.post(
+        `${config.API_URL}/api/cranes/send-summary-report`,
+        reportData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Summary report sent successfully!");
+    } catch (error) {
+      console.error("Error sending summary report:", error);
+      alert(`❌ Failed to send summary report: ${error.response?.data?.error || error.message}`);
+    }
   };
 
   // Helper function to convert Excel date serial numbers
@@ -255,17 +297,70 @@ const handleEmailAlert = async (id, expiration) => {
     <div className="supervisor-dashboard-wrapper">
       <div className="supervisor-dashboard">
         <div className="dashboard-header">
-          <h1>🏗️ Crane Management System</h1>
-          <p>📊 Monitor inspections • ⏰ Track expirations • 📧 Send alerts</p>
+          <div className="header-left">
+            <h1> Crane Management System</h1>
+            <p>📊 Monitor inspections • ⏰ Track expirations • 📧 Send alerts</p>
+          </div>
+          <div className="header-right">
+            <div className="header-alerts">
+              {(alertSummary.expired > 0 || alertSummary.expiring > 0) && (
+                <div className="web-alerts">
+                  <div className="alert-icon">🔔</div>
+                  <div className="alert-count">{alertSummary.expired + alertSummary.expiring}</div>
+                  <div className="alert-dropdown">
+                    <div className="alert-summary">
+                      <div className="summary-item">
+                        <span className="summary-icon">🚨</span>
+                        <span className="summary-text">{alertSummary.expired} Expired</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-icon">⚠️</span>
+                        <span className="summary-text">{alertSummary.expiring} Expiring This Month</span>
+                      </div>
+                      <div className="summary-footer">
+                        Total Cranes: {cranes.length}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="email-alerts" onClick={handleEmailAlertClick}>
+                <div className="email-icon">📧</div>
+                <div className="email-dropdown">
+                  <div className="email-summary">
+                    <div className="summary-item clickable" onClick={(e) => { e.stopPropagation(); handleSendEmailAlert(); }}>
+                      <span className="summary-icon">📧</span>
+                      <span className="summary-text">Send Email Alert</span>
+                    </div>
+                    <div className="summary-item clickable" onClick={(e) => { e.stopPropagation(); handleSendSummaryReport(); }}>
+                      <span className="summary-icon">📊</span>
+                      <span className="summary-text">Send Summary Report</span>
+                    </div>
+                    <div className="summary-footer">
+                      Email notifications
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       <div className="dashboard-content">
-        <div className="upload-section">
-          <h3>📁 Excel Data Import</h3>
-          <ExcelUpload onUploadComplete={fetchCranes} />
-        </div>
-
         <div className="controls-section">
+          <div className="upload-section">
+            <div className="upload-header" onClick={() => setUploadOpen(!uploadOpen)}>
+              <h3>📁 Excel Data Import</h3>
+              <span className="dropdown-arrow">{uploadOpen ? '▼' : '▶'}</span>
+            </div>
+            {uploadOpen && (
+              <div className="upload-content">
+                <ExcelUpload onUploadComplete={fetchCranes} />
+              </div>
+            )}
+          </div>
+          
           <div className="search-controls">
             <input
               type="text"
@@ -274,9 +369,14 @@ const handleEmailAlert = async (id, expiration) => {
               onChange={(e) => setFilterValue(e.target.value)}
               className="search-input"
             />
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              ➕ Add New Crane
-            </button>
+            <a 
+    href="/add-crane" 
+    target="_blank" 
+    rel="noopener noreferrer" 
+    className="btn btn-primary"
+  >
+    ➕ Add New Crane
+  </a>
             <button className="btn btn-danger" onClick={handleLogout}>
               🚪 Logout
             </button>
@@ -292,16 +392,7 @@ const handleEmailAlert = async (id, expiration) => {
           />
         </div>
 
-        {showModal && (
-          <AddEditCraneModal
-            crane={editingCrane}
-            onSave={handleSaveCrane}
-            onClose={() => {
-              setShowModal(false);
-              setEditingCrane(null);
-            }}
-          />
-        )}
+        {/* Modal removed - editing now opens in new tab */}
       </div>
     </div>
     </div>

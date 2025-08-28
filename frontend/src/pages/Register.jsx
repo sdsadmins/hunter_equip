@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -9,6 +10,7 @@ export default function Register() {
   });
 
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -19,8 +21,23 @@ export default function Register() {
     setMessage("");
 
     try {
-      await axios.post("http://localhost:5000/api/auth/register", form);
-      setMessage("✅ Registration successful! You can now log in.");
+      const res = await axios.post("/api/auth/register", form);
+      
+      // Store token + user details (same as login)
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userId", res.data.user.id);
+      localStorage.setItem("userRole", "supervisor"); // New users are supervisors
+      localStorage.setItem("email", res.data.user.email);
+      localStorage.setItem("name", res.data.user.name);
+
+      // Show success message briefly then redirect
+      setMessage("✅ Registration successful! Redirecting to dashboard...");
+      
+      // Redirect to supervisor dashboard after a short delay
+      setTimeout(() => {
+        navigate("/supervisor-dashboard");
+      }, 1500);
+      
     } catch (err) {
       console.error("Registration error:", err.response?.data || err);
       setMessage("❌ Registration failed. Please check your details.");

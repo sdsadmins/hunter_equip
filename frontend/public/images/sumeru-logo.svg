@@ -1,0 +1,25 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sumeruGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="digitalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- SUMERU text -->
+  <text x="10" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="url(#sumeruGradient)">
+    SUMERU
+  </text>
+  
+  <!-- DIGITAL text -->
+  <text x="10" y="45" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="url(#digitalGradient)">
+    DIGITAL
+  </text>
+  
+  <!-- Decorative line -->
+  <line x1="10" y1="50" x2="120" y2="50" stroke="#fbbf24" stroke-width="2" opacity="0.8"/>
+</svg>

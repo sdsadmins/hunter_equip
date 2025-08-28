@@ -7,6 +7,7 @@ import config from "../config";
 export default function HomePage() {
   const [cranes, setCranes] = useState([]);
   const [showCranes, setShowCranes] = useState(false);
+  const [alerts, setAlerts] = useState([]);
   const navigate = useNavigate();
 
   // Helper function to convert Excel date serial numbers
@@ -85,6 +86,29 @@ export default function HomePage() {
       console.log("Fetched cranes:", res.data); // Debug log
       setCranes(res.data);
       setShowCranes(true);
+
+      // Check for expiring cranes and create web alerts
+      const today = new Date();
+      const newAlerts = [];
+      res.data.forEach((crane) => {
+        try {
+          const expDate = new Date(crane.expiration);
+          const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+          if (diffDays > 0 && diffDays <= 4) {
+            newAlerts.push({
+              id: crane._id || Math.random(),
+              message: `⚠️ Crane ${crane.unit} expires in ${diffDays} day${diffDays > 1 ? 's' : ''}`,
+              type: diffDays <= 1 ? 'critical' : 'warning',
+              unit: crane.unit,
+              expiration: crane.expiration,
+              color: getExpirationColor(crane.expiration)
+            });
+          }
+        } catch (error) {
+          console.warn(`Invalid date format for crane ${crane.unit}: ${crane.expiration}`);
+        }
+      });
+      setAlerts(newAlerts);
     } catch (err) {
       console.error("Error fetching cranes:", err);
       alert("Failed to load cranes. Please check if the backend server is running.");
@@ -101,6 +125,26 @@ export default function HomePage() {
       <p className="home-subtitle">
         Manage crane inspections efficiently and keep track of expiration dates.
       </p>
+
+      {/* Web Alerts - positioned absolutely in top-right */}
+      {alerts.length > 0 && (
+        <div className="web-alerts-home">
+          <div className="alert-icon">🔔</div>
+          <div className="alert-count">{alerts.length}</div>
+          <div className="alert-dropdown">
+            {alerts.map((alert) => (
+              <div key={alert.id} className={`alert-item ${alert.type}`}>
+                <div className="alert-content">
+                  <span className="alert-message">{alert.message}</span>
+                  <span className="alert-expiration" style={{ color: alert.color }}>
+                    ({alert.expiration})
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Login/Register */}
       <div className="button-group">

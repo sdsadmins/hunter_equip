@@ -1,0 +1,27 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background (transparent) -->
+  <rect width="200" height="60" fill="transparent"/>
+  
+  <!-- Yellow flame/droplet icon -->
+  <g transform="translate(10, 15)">
+    <!-- Main flame shape -->
+    <path d="M15 25 L15 35 L25 30 L15 25 Z" fill="#ffcc00"/>
+    <!-- Left flame curve -->
+    <path d="M15 25 Q10 20 15 15 Q20 20 15 25" fill="#ffcc00"/>
+    <!-- Right flame curve -->
+    <path d="M15 25 Q20 20 15 15 Q10 20 15 25" fill="#ffcc00"/>
+    <!-- Center teardrop -->
+    <ellipse cx="15" cy="25" rx="3" ry="5" fill="#ffcc00"/>
+  </g>
+  
+  <!-- Dark blue separator line -->
+  <line x1="45" y1="15" x2="45" y2="45" stroke="#1e3a8a" stroke-width="2"/>
+  
+  <!-- SUMERU DIGITAL text -->
+  <g transform="translate(55, 20)">
+    <!-- SUMERU text in dark blue -->
+    <text x="0" y="15" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e3a8a">SUMERU</text>
+    <!-- DIGITAL text in yellow -->
+    <text x="0" y="35" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffcc00">DIGITAL</text>
+  </g>
+</svg>

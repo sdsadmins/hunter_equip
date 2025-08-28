@@ -1,0 +1,146 @@
+.footer {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  color: #fff;
+  padding: 40px 0 20px 0;
+  border-top: 2px solid #ff9800;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.footer-section h4 {
+  color: #ffcc00;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.footer-section p {
+  color: #ccc;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 8px;
+}
+
+.footer-section ul li a {
+  color: #ccc;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-section ul li a:hover {
+  color: #ff9800;
+  text-decoration: underline;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #444;
+}
+
+.footer-bottom p {
+  color: #888;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Developer info styling */
+.developer-info {
+  margin-top: 15px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.developer-info span {
+  color: #888;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.sumeru-logo-img {
+  height: 30px;
+  width: auto;
+  margin-left: 2px;
+  filter: brightness(1.1);
+  object-fit: contain;
+}
+
+.sumeru-logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 8px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+}
+
+.sumeru-logo-text .sumeru {
+  color: #1e3a8a;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sumeru-logo-text .digital {
+  color: #ffcc00;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dev-logo {
+  height: 40px;
+  width: auto;
+  margin-left: 8px;
+  filter: brightness(1.1);
+  object-fit: contain;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .footer {
+    padding: 30px 0 15px 0;
+  }
+  
+  .footer-section {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-content {
+    padding: 0 15px;
+  }
+  
+  .footer-section h4 {
+    font-size: 16px;
+  }
+  
+  .footer-section p {
+    font-size: 14px;
+  }
+}
