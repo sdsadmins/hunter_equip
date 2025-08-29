@@ -78,10 +78,7 @@ export default function SupervisorDashboard() {
 
   const fetchCranes = async () => {
     try {
-      const token = localStorage.getItem("token");
-            const res = await axios.get(`${config.API_URL}/api/cranes/supervisor`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/cranes`);
       
       setCranes(res.data);
 

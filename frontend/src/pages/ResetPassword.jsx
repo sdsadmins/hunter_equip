@@ -36,11 +36,12 @@ export default function ResetPassword() {
 
   const validateResetToken = async () => {
     try {
-      await axios.get(`http://localhost:5000/api/auth/validate-reset-token?token=${token}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/validate-reset-token?token=${token}`);
       setIsValidToken(true);
     } catch (err) {
-      setMessage("❌ Invalid or expired reset link. Please request a new password reset.");
+      console.error("Token validation error:", err);
       setIsValidToken(false);
+      setMessage("❌ Invalid or expired reset token. Please request a new password reset.");
     }
   };
 
@@ -99,7 +100,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/reset-password", {
+      const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/reset-password`, {
         token: token,
         password: form.password
       });

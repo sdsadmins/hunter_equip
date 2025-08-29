@@ -20,7 +20,9 @@ export default function ForgotPassword() {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
+      const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/forgot-password`, {
+        email: email
+      });
       setMessage("✅ Password reset link has been sent to your email. Please check your inbox.");
       
       // Redirect to login page after a delay
