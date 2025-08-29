@@ -1,6 +1,6 @@
 import React from "react";
 import axios from "axios";
-import AddEditCraneModal from "./AddEditCraneModal";
+import CraneForm from "./CraneForm";
 import config from "../config";
 
 export default function AddCranePage() {
@@ -32,9 +32,8 @@ export default function AddCranePage() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>➕ Add New Crane</h2>
-      <AddEditCraneModal
+    <div style={{ minHeight: "calc(100vh - 200px)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <CraneForm
         crane={null}                // start with empty form
         onSave={handleSaveCrane}    // ✅ real API save
         onClose={() => window.close()}

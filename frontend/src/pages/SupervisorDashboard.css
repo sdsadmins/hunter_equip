@@ -14,10 +14,10 @@
 }
 
 .dashboard-header {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 30px 40px;
+  background: linear-gradient(135deg, rgba(15, 20, 25, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 25px 35px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -25,6 +25,7 @@
   margin-bottom: 0;
   position: relative;
   z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .header-left {
@@ -42,26 +43,28 @@
 }
 
 .dashboard-header h1 {
-  font-size: 3rem;
-  margin-bottom: 10px;
+  font-size: 2.2rem;
+  margin-bottom: 8px;
   font-weight: 700;
   background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: none;
+  letter-spacing: -0.5px;
 }
 
 .dashboard-header p {
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   opacity: 0.8;
-  font-weight: 300;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .dashboard-content {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 40px 30px;
+  padding: 30px 25px;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -102,11 +105,11 @@
 
 .upload-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .dropdown-arrow {
@@ -138,15 +141,16 @@
 }
 
 .upload-section button {
-  background: #004d99;   /* dark blue button */
+  background: linear-gradient(135deg, #004d99 0%, #0066cc 100%);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
   transition: 0.3s;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 77, 153, 0.3);
 }
 
 .upload-section button:hover {
@@ -163,15 +167,16 @@
 
 
 .controls-section {
-  margin-bottom: 30px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 25px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .search-controls {
@@ -185,14 +190,15 @@
 .search-input {
   flex: 1;
   min-width: 150px;
-  padding: 10px 20px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.1);
+  padding: 12px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.08);
   color: white;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .search-input::placeholder {
@@ -207,19 +213,20 @@
 }
 
 .btn {
-  padding: 15px 25px;
+  padding: 12px 20px;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   position: relative;
   overflow: hidden;
+  letter-spacing: 0.3px;
 }
 
 .btn::before {
@@ -259,13 +266,24 @@
   box-shadow: 0 15px 35px rgba(255, 107, 107, 0.4);
 }
 
+.btn-secondary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+}
+
 .table-section {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Enhanced Table Styles */
@@ -283,13 +301,14 @@
 }
 
 .crane-table th {
-  padding: 20px 15px;
+  padding: 16px 12px;
   text-align: left;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .crane-table tbody tr {
@@ -304,11 +323,12 @@
 }
 
 .crane-table td {
-  padding: 18px 15px;
-  font-size: 0.95rem;
+  padding: 14px 12px;
+  font-size: 0.85rem;
   vertical-align: middle;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
+  line-height: 1.3;
 }
 
 .actions-cell {
@@ -318,17 +338,18 @@
 }
 
 .action-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  letter-spacing: 0.2px;
 }
 
 .edit-btn {
@@ -471,14 +492,14 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
-  padding: 12px 18px;
-  border-radius: 30px;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  padding: 10px 15px;
+  border-radius: 25px;
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.3s ease;
-  min-width: 70px;
+  min-width: 60px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -489,7 +510,7 @@
 }
 
 .alert-icon {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   animation: pulse 2s infinite;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
@@ -498,12 +519,12 @@
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: bold;
   animation: bounce 1s infinite;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
@@ -597,7 +618,7 @@
 }
 
 .summary-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: white;
 }
@@ -629,14 +650,14 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
-  padding: 12px 18px;
-  border-radius: 30px;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%);
+  padding: 10px 15px;
+  border-radius: 25px;
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.15);
   transition: all 0.3s ease;
-  min-width: 70px;
+  min-width: 60px;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
 }
 
@@ -647,7 +668,7 @@
 }
 
 .email-icon {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 

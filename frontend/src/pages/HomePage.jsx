@@ -47,9 +47,10 @@ export default function HomePage() {
     return dateValue.toString();
   };
 
-  // Function to get expiration color
-  const getExpirationColor = (expiration) => {
-    if (!expiration) return "gray";
+  // Function to get expiration status and priority for sorting
+  const getExpirationStatus = (expiration) => {
+    if (!expiration) return { status: "unknown", priority: 3, color: "gray" };
+    
     try {
       // Convert DD/MM/YYYY to Date object for comparison
       const parts = expiration.split('/');
@@ -61,17 +62,45 @@ export default function HomePage() {
         const today = new Date();
         
         if (expirationDate < today) {
-          return "red"; // Expired
+          return { status: "expired", priority: 3, color: "red" }; // Expired - lowest priority
         } else if (expirationDate.getTime() - today.getTime() <= 30 * 24 * 60 * 60 * 1000) {
-          return "orange"; // Within 30 days
+          return { status: "within_month", priority: 2, color: "orange" }; // Within 30 days - medium priority
         } else {
-          return "green"; // More than 30 days
+          return { status: "above_month", priority: 1, color: "green" }; // More than 30 days - highest priority
         }
       }
-      return "gray"; // Invalid format
+      return { status: "unknown", priority: 3, color: "gray" }; // Invalid format
     } catch (error) {
-      return "gray"; // Error parsing date
+      return { status: "unknown", priority: 3, color: "gray" }; // Error parsing date
     }
+  };
+
+  // Function to sort cranes by expiration status
+  const sortCranesByExpiration = (cranesList) => {
+    return cranesList.sort((a, b) => {
+      const statusA = getExpirationStatus(a.expiration);
+      const statusB = getExpirationStatus(b.expiration);
+      
+      // First sort by priority (1 = above month, 2 = within month, 3 = expired)
+      if (statusA.priority !== statusB.priority) {
+        return statusA.priority - statusB.priority;
+      }
+      
+      // If same priority, sort by expiration date (earliest first)
+      try {
+        const partsA = a.expiration.split('/');
+        const partsB = b.expiration.split('/');
+        if (partsA.length === 3 && partsB.length === 3) {
+          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+          return dateA - dateB;
+        }
+      } catch (error) {
+        // If date parsing fails, keep original order
+      }
+      
+      return 0;
+    });
   };
 
   const fetchCranes = async () => {
@@ -84,7 +113,10 @@ export default function HomePage() {
     try {
       const res = await axios.get(`${config.API_URL}/api/cranes/public`);
       console.log("Fetched cranes:", res.data); // Debug log
-      setCranes(res.data);
+      
+      // Sort cranes by expiration status
+      const sortedCranes = sortCranesByExpiration(res.data);
+      setCranes(sortedCranes);
       setShowCranes(true);
 
       // Check for expiring cranes and create web alerts
@@ -101,7 +133,7 @@ export default function HomePage() {
               type: diffDays <= 1 ? 'critical' : 'warning',
               unit: crane.unit,
               expiration: crane.expiration,
-              color: getExpirationColor(crane.expiration)
+              color: getExpirationStatus(crane.expiration).color
             });
           }
         } catch (error) {
@@ -170,30 +202,33 @@ export default function HomePage() {
           <table className="crane-table">
             <thead>
               <tr>
-                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px" }}>
-                  Unit #
+                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px", textAlign: "center" }}>
+                  UNIT #
                 </th>
-                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px" }}>
-                  Make & Model
+                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px", textAlign: "center" }}>
+                  MAKE & MODEL
                 </th>
-                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px" }}>
-                  Expiration
+                <th style={{ backgroundColor: "#222", color: "#ffcc00", fontWeight: "bold", padding: "8px", textAlign: "center" }}>
+                  EXPIRATION
                 </th>
               </tr>
             </thead>
             <tbody>
-              {cranes.map((crane, index) => (
-                <tr key={index} onClick={handleCraneClick}>
-                  <td>{crane.unit}</td>
-                  <td>{crane.makeModel}</td>
-                  <td style={{ 
-                    color: getExpirationColor(crane.expiration),
-                    fontWeight: "bold"
-                  }}>
-                    {crane.expiration}
-                  </td>
-                </tr>
-              ))}
+              {cranes.map((crane, index) => {
+                const expirationStatus = getExpirationStatus(crane.expiration);
+                return (
+                  <tr key={index} onClick={handleCraneClick}>
+                    <td>{crane.unit}</td>
+                    <td>{crane.makeModel}</td>
+                    <td style={{ 
+                      color: expirationStatus.color,
+                      fontWeight: "bold"
+                    }}>
+                      {crane.expiration}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -202,6 +237,10 @@ export default function HomePage() {
       {showCranes && cranes.length === 0 && (
         <p className="no-cranes">No cranes available. Please upload an Excel file from the supervisor dashboard.</p>
       )}
+
+
     </div>
   );
 }
+
+

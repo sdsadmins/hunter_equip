@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import AddEditCraneModal from "./AddEditCraneModal";
+import CraneForm from "./CraneForm";
 
 export default function EditCranePage() {
   const [crane, setCrane] = useState(null);
@@ -56,7 +56,7 @@ export default function EditCranePage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "20px", textAlign: "center" }}>
+      <div style={{ padding: "20px", textAlign: "center", color: "white" }}>
         <h2>Loading crane data...</h2>
       </div>
     );
@@ -64,7 +64,7 @@ export default function EditCranePage() {
 
   if (!crane) {
     return (
-      <div style={{ padding: "20px", textAlign: "center" }}>
+      <div style={{ padding: "20px", textAlign: "center", color: "white" }}>
         <h2>❌ Error: No crane data found</h2>
         <button onClick={() => window.close()}>Close Tab</button>
       </div>
@@ -72,9 +72,8 @@ export default function EditCranePage() {
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>✏️ Edit Crane - {crane["Unit #"]}</h2>
-      <AddEditCraneModal
+    <div style={{ minHeight: "calc(100vh - 200px)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <CraneForm
         crane={crane}           // pass the crane data to edit
         onSave={handleSaveCrane} // ✅ real API update
         onClose={() => window.close()}

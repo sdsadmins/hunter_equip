@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import SupervisorDashboard from "./pages/SupervisorDashboard";
-import LoginPage from "./pages/LoginPage";
+import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Layout from "./components/Layout";
 import AddCranePage from "./pages/AddCranePage";
 import EditCranePage from "./pages/EditCranePage";
@@ -23,7 +25,17 @@ function App() {
         } />
         <Route path="/login" element={
           <Layout>
-            <LoginPage />
+            <Login />
+          </Layout>
+        } />
+        <Route path="/forgot-password" element={
+          <Layout>
+            <ForgotPassword />
+          </Layout>
+        } />
+        <Route path="/reset-password" element={
+          <Layout>
+            <ResetPassword />
           </Layout>
         } />
         <Route path="/supervisor-dashboard" element={

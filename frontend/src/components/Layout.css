@@ -2,19 +2,34 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(135deg, #0f1419 0%, #1e293b 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .main-content {
   flex: 1;
   /* This ensures the main content takes up all available space */
+  position: relative;
+  z-index: 1;
 }
 .footer {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, #0f1419 0%, #1e293b 50%, #0f1419 100%);
   color: #fff;
-  padding: 40px 0 20px 0;
-  margin-top: auto;
-  border-top: 2px solid #ff9800;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  padding: 15px 0 10px 0;
+  margin-top: 50px;
+  border-top: 3px solid linear-gradient(90deg, #ff6b35, #f7931e, #ff6b35);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff6b35, #f7931e, #ff6b35);
 }
 
 .footer-content {
@@ -23,20 +38,38 @@
   padding: 0 20px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
+  gap: 15px;
+  position: relative;
+  z-index: 1;
 }
 
 .footer-section h4 {
-  color: #ffcc00;
-  margin-bottom: 15px;
-  font-size: 18px;
-  font-weight: bold;
+  color: #ff6b35;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+}
+
+.footer-section h4::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, #ff6b35, #f7931e);
+  border-radius: 1px;
 }
 
 .footer-section p {
-  color: #ccc;
-  margin-bottom: 8px;
-  line-height: 1.6;
+  color: #e2e8f0;
+  margin-bottom: 5px;
+  line-height: 1.4;
+  font-size: 13px;
+  transition: color 0.3s ease;
 }
 
 .footer-section ul {
@@ -46,25 +79,83 @@
 }
 
 .footer-section ul li {
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 
 .footer-section ul li a {
-  color: #ccc;
+  color: #cbd5e1;
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  padding: 4px 0;
+  display: inline-block;
+  position: relative;
 }
 
 .footer-section ul li a:hover {
-  color: #ff9800;
-  text-decoration: underline;
+  color: #ff6b35;
+  transform: translateX(5px);
+}
+
+.footer-section ul li a::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #ff6b35, #f7931e);
+  transition: width 0.3s ease;
+}
+
+.footer-section ul li a:hover::before {
+  width: 100%;
+}
+
+/* Social icons styling */
+.social-icons {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.social-icon {
+  display: inline-block;
+  width: 35px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  text-align: center;
+  line-height: 35px;
+  text-decoration: none;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.social-icon:hover {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: #ff6b35;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
 .footer-bottom {
   text-align: center;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #444;
+  margin-top: 10px;
+  padding-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-bottom::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #475569, transparent);
 }
 
 .footer-bottom p {
@@ -75,71 +166,73 @@
 
 /* Developer info styling */
 .developer-info {
-  margin-top: 15px;
+  margin-top: 0;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0;
+  margin-bottom: 0;
+  line-height: 1;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .developer-info span {
-  color: #888;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.sumeru-logo-img {
-  height: 30px;
-  width: auto;
-  margin-left: 8px;
-  filter: brightness(1.1);
-  object-fit: contain;
-}
-
-.sumeru-logo-text {
+  color: #94a3b8;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  margin-right: -5px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  margin-left: 8px;
-  font-weight: bold;
-  font-family: Arial, sans-serif;
+  font-weight: 500;
 }
 
-.sumeru-logo-text .sumeru {
-  color: #1e3a8a;
-  font-size: 16px;
-  line-height: 1;
-}
 
-.sumeru-logo-text .digital {
-  color: #ffcc00;
-  font-size: 14px;
-  line-height: 1;
-}
 
 .dev-logo {
-  height: 40px;
+  height: 28px;
   width: auto;
-  margin-left: 8px;
-  filter: brightness(1.1);
+  margin-left: 0;
+  filter: brightness(1.2) contrast(1.1);
   object-fit: contain;
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.dev-logo:hover {
+  transform: scale(1.05);
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .footer-content {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 12px;
   }
   
   .footer {
-    padding: 30px 0 15px 0;
+    padding: 12px 0 8px 0;
+    margin-top: 30px;
   }
   
   .footer-section {
     text-align: center;
+  }
+  
+  .footer-section h4::after {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .developer-info {
+    padding: 4px 10px;
+    margin: 3px auto;
+    max-width: 250px;
   }
 }
 
@@ -149,11 +242,42 @@
   }
   
   .footer-section h4 {
-    font-size: 16px;
+    font-size: 18px;
   }
   
   .footer-section p {
     font-size: 14px;
   }
+  
+  .developer-info {
+    padding: 6px 12px;
+    margin: 8px auto;
+    max-width: 280px;
+  }
+  
+  .dev-logo {
+    height: 40px;
+  }
+}
+
+/* Animation for footer sections */
+.footer-section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }
 

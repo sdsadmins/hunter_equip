@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-export default function Register() {
+export default function ResetPassword() {
   const [form, setForm] = useState({
-    name: "",
-    email: "",
     password: "",
     confirmPassword: ""
   });
-
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isValidToken, setIsValidToken] = useState(false);
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -21,8 +20,29 @@ export default function Register() {
   const [passwordMatch, setPasswordMatch] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isDuplicateUser, setIsDuplicateUser] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const token = searchParams.get("token");
+
+  useEffect(() => {
+    // Validate the reset token when component mounts
+    if (token) {
+      validateResetToken();
+    } else {
+      setMessage("❌ Invalid reset link. Please request a new password reset.");
+    }
+  }, [token]);
+
+  const validateResetToken = async () => {
+    try {
+      await axios.get(`http://localhost:5000/api/auth/validate-reset-token?token=${token}`);
+      setIsValidToken(true);
+    } catch (err) {
+      setMessage("❌ Invalid or expired reset link. Please request a new password reset.");
+      setIsValidToken(false);
+    }
+  };
 
   const validatePassword = (password) => {
     const validations = {
@@ -56,96 +76,79 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
+    setIsLoading(true);
+
+    if (!isValidToken) {
+      setMessage("❌ Invalid reset link. Please request a new password reset.");
+      setIsLoading(false);
+      return;
+    }
 
     // Validate password before submission
     if (!validatePassword(form.password)) {
       setMessage("❌ Please ensure your password meets all requirements.");
+      setIsLoading(false);
       return;
     }
 
     // Check if passwords match
     if (form.password !== form.confirmPassword) {
       setMessage("❌ Passwords do not match. Please try again.");
+      setIsLoading(false);
       return;
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", {
-        name: form.name,
-        email: form.email,
+      const res = await axios.post("http://localhost:5000/api/auth/reset-password", {
+        token: token,
         password: form.password
       });
       
-      // Store token + user details (same as login)
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data.user.id);
-      localStorage.setItem("userRole", "supervisor"); // New users are supervisors
-      localStorage.setItem("email", res.data.user.email);
-      localStorage.setItem("name", res.data.user.name);
-
-      // Show success message briefly then redirect
-      setMessage("✅ Registration successful! Redirecting to dashboard...");
+      setMessage("✅ Password reset successful! Redirecting to login...");
       
-      // Redirect to supervisor dashboard after a short delay
+      // Redirect to login page after a delay
       setTimeout(() => {
-        navigate("/supervisor-dashboard");
-      }, 1500);
+        navigate("/login");
+      }, 2000);
       
     } catch (err) {
-      console.error("Registration error:", err.response?.data || err);
-      console.error("Response status:", err.response?.status);
-      console.error("Response data:", err.response?.data);
-      
-      // Handle specific error cases
-      if (err.response?.status === 409) {
-        setMessage("❌ User already exists with this email address. Please go to login or use a different email.");
-        setIsDuplicateUser(true);
-      } else if (err.response?.data?.error) {
-        setMessage(`❌ ${err.response.data.error}`);
-        setIsDuplicateUser(false);
-      } else if (err.response?.data?.msg) {
-        setMessage(`❌ ${err.response.data.msg}`);
-        setIsDuplicateUser(false);
-      } else if (err.message && err.message.includes("already exists")) {
-        setMessage("❌ User already exists with this email address. Please go to login or use a different email.");
-        setIsDuplicateUser(true);
-      } else {
-        setMessage("❌ Registration failed. Please check your details.");
-        setIsDuplicateUser(false);
-      }
+      console.error("Reset password error:", err.response?.data || err);
+      setMessage("❌ " + (err.response?.data?.message || "Failed to reset password. Please try again."));
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (!token) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.form}>
+          <h2 style={styles.title}>Invalid Reset Link</h2>
+          <p style={styles.message}>❌ Invalid reset link. Please request a new password reset.</p>
+          <button 
+            onClick={() => navigate("/forgot-password")}
+            style={styles.button}
+          >
+            Request New Reset Link
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <h2 style={styles.title}>Register</h2>
-
-        <input
-          type="text"
-          name="name"
-          placeholder="Full Name"
-          value={form.name}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
-
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+        <h2 style={styles.title}>Reset Password</h2>
+        <p style={styles.subtitle}>
+          Enter your new password below.
+        </p>
 
         <div style={styles.passwordContainer}>
           <input
             type={showPassword ? "text" : "password"}
             name="password"
-            placeholder="Password"
+            placeholder="New Password"
             value={form.password}
             onChange={handleChange}
             required
@@ -164,7 +167,7 @@ export default function Register() {
           <input
             type={showConfirmPassword ? "text" : "password"}
             name="confirmPassword"
-            placeholder="Confirm Password"
+            placeholder="Confirm New Password"
             value={form.confirmPassword}
             onChange={handleChange}
             required
@@ -229,46 +232,15 @@ export default function Register() {
           </div>
         )}
 
-        <button type="submit" style={styles.button}>
-          Register
+        <button 
+          type="submit" 
+          style={styles.button}
+          disabled={isLoading || !isValidToken}
+        >
+          {isLoading ? "Resetting..." : "Reset Password"}
         </button>
 
-        {/* Forgot Password Link */}
-        <div style={styles.forgotPasswordContainer}>
-          <span style={styles.forgotPasswordText}>Already have an account? </span>
-          <button 
-            type="button" 
-            onClick={() => navigate("/forgot-password")}
-            style={styles.forgotPasswordLink}
-          >
-            Forgot Password?
-          </button>
-        </div>
-
         {message && <p style={styles.message}>{message}</p>}
-        
-        {isDuplicateUser && (
-          <div style={styles.duplicateUserActions}>
-            <button 
-              type="button" 
-              onClick={() => navigate("/login")}
-              style={styles.loginButton}
-            >
-              🔐 Go to Login
-            </button>
-            <button 
-              type="button" 
-              onClick={() => {
-                setForm({ ...form, email: "" });
-                setMessage("");
-                setIsDuplicateUser(false);
-              }}
-              style={styles.tryAgainButton}
-            >
-              ✏️ Try Different Email
-            </button>
-          </div>
-        )}
       </form>
     </div>
   );
@@ -294,7 +266,14 @@ const styles = {
   },
   title: {
     color: "#ffcc00", // gold/yellow title
-    marginBottom: "20px"
+    marginBottom: "10px"
+  },
+  subtitle: {
+    color: "#ccc",
+    fontSize: "14px",
+    textAlign: "center",
+    marginBottom: "20px",
+    lineHeight: "1.4"
   },
   input: {
     width: "100%",
@@ -377,53 +356,9 @@ const styles = {
     fontWeight: "bold",
     fontSize: "16px"
   },
-  forgotPasswordContainer: {
-    marginTop: "15px",
-    textAlign: "center"
-  },
-  forgotPasswordText: {
-    color: "#ccc",
-    fontSize: "14px"
-  },
-  forgotPasswordLink: {
-    background: "none",
-    border: "none",
-    color: "#ffcc00",
-    cursor: "pointer",
-    textDecoration: "underline",
-    fontSize: "14px"
-  },
   message: {
     marginTop: "15px",
     textAlign: "center",
     color: "#fff"
-  },
-  duplicateUserActions: {
-    marginTop: "15px",
-    display: "flex",
-    gap: "10px",
-    justifyContent: "center"
-  },
-  loginButton: {
-    backgroundColor: "#4CAF50",
-    color: "#fff",
-    padding: "10px 15px",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "14px",
-    transition: "all 0.3s ease"
-  },
-  tryAgainButton: {
-    backgroundColor: "#ff9800",
-    color: "#fff",
-    padding: "10px 15px",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "14px",
-    transition: "all 0.3s ease"
   }
 };

@@ -50,6 +50,17 @@ export default function Login() {
         <button type="submit" style={styles.button}>
           Login
         </button>
+        
+        {/* Forgot Password Link */}
+        <div style={styles.forgotPasswordContainer}>
+          <button 
+            type="button" 
+            onClick={() => navigate("/forgot-password")}
+            style={styles.forgotPasswordLink}
+          >
+            Forgot Password?
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -97,5 +108,17 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
     fontSize: "16px"
+  },
+  forgotPasswordContainer: {
+    marginTop: "15px",
+    textAlign: "center"
+  },
+  forgotPasswordLink: {
+    background: "none",
+    border: "none",
+    color: "#ffcc00",
+    cursor: "pointer",
+    textDecoration: "underline",
+    fontSize: "14px"
   }
 };

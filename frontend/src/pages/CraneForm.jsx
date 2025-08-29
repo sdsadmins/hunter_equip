@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import "./AddEditCraneModal.css";
+import "./CraneForm.css";
 
-export default function AddEditCraneModal({ crane, onSave, onClose }) {
+export default function CraneForm({ crane, onSave, onClose }) {
   const [form, setForm] = useState({
     "Unit #": "",
     "Year": "",
@@ -125,9 +125,9 @@ export default function AddEditCraneModal({ crane, onSave, onClose }) {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
+    <div className="crane-form-container">
+      <div className="crane-form-content">
+        <div className="crane-form-header">
           <h2>{crane ? "✏️ Edit Crane" : "➕ Add New Crane"}</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
