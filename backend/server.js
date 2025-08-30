@@ -15,7 +15,7 @@ console.log("Loaded EMAIL_USER from .env:", process.env.EMAIL_USER);
 console.log("Loaded DB_URL from .env:", process.env.DB_URL ? "Found" : "Not found");
 const app = express();
 app.use(cors({ 
-  origin: process.env.FRONTEND_URL || "http://localhost:3000", 
+  origin: ["https://hunter.sumerudigital.com","http://localhost:3000"], 
   credentials: true 
 }));
 app.use(express.json());

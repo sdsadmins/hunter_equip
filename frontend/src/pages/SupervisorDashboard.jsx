@@ -78,7 +78,10 @@ export default function SupervisorDashboard() {
 
   const fetchCranes = async () => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/cranes`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${config.API_URL}/cranes/supervisor`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       setCranes(res.data);
 
@@ -136,7 +139,7 @@ export default function SupervisorDashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this crane?")) return;
     const token = localStorage.getItem("token");
-    await axios.delete(`${config.API_URL}/api/cranes/${id}`, {
+    await axios.delete(`${config.API_URL}/cranes/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     fetchCranes();
@@ -175,7 +178,7 @@ const handleEmailAlert = async (id, expiration) => {
 
   try {
          await axios.post(
-       `${config.API_URL}/api/cranes/${id}/send-alert`,
+       `${config.API_URL}/cranes/${id}/send-alert`,
       { recipientEmail },
       {
         headers: {

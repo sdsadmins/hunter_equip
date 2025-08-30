@@ -111,7 +111,7 @@ export default function HomePage() {
     }
 
     try {
-      const res = await axios.get(`${config.API_URL}/api/cranes/public`);
+      const res = await axios.get(`${config.API_URL}/cranes/public`);
       console.log("Fetched cranes:", res.data); // Debug log
       
       // Sort cranes by expiration status
