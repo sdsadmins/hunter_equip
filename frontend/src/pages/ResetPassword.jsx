@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import config from "../config";
 
 export default function ResetPassword() {
   const [form, setForm] = useState({
@@ -36,7 +37,7 @@ export default function ResetPassword() {
 
   const validateResetToken = async () => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/validate-reset-token?token=${token}`);
+      const res = await axios.get(`${config.API_URL}/api/auth/validate-reset-token?token=${token}`);
       setIsValidToken(true);
     } catch (err) {
       console.error("Token validation error:", err);
@@ -100,7 +101,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/reset-password`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/reset-password`, {
         token: token,
         password: form.password
       });

@@ -100,8 +100,24 @@ export default function CraneTable({ cranes, onEdit, onDelete, onEmailAlert }) {
               </td>
               <td>
                 <button onClick={() => onEdit(crane)}>Edit</button>
-                <button onClick={() => onDelete(crane._id)}>Delete</button>
-                <button onClick={() => onEmailAlert(crane._id, crane.Expiration)}>Email</button>
+                <button onClick={() => {
+                  console.log("Delete clicked for crane:", crane);
+                  console.log("Crane ID:", crane._id);
+                  if (!crane._id) {
+                    alert("Error: Crane ID not found. Please refresh the page and try again.");
+                    return;
+                  }
+                  onDelete(crane._id);
+                }}>Delete</button>
+                <button onClick={() => {
+                  console.log("Email clicked for crane:", crane);
+                  console.log("Crane ID:", crane._id);
+                  if (!crane._id) {
+                    alert("Error: Crane ID not found. Please refresh the page and try again.");
+                    return;
+                  }
+                  onEmailAlert(crane._id, crane.Expiration);
+                }}>Email</button>
               </td>
             </tr>
           ))

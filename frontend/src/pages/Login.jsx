@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import config from "../config";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -22,7 +23,7 @@ export default function Login() {
     setMessage("");
 
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/login`, {
         email: form.email,
         password: form.password,
       });

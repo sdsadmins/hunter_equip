@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import CraneForm from "./CraneForm";
+import config from "../config";
 
 export default function EditCranePage() {
   const [crane, setCrane] = useState(null);
@@ -36,7 +37,7 @@ export default function EditCranePage() {
       }
 
       // Update existing crane
-      await axios.put(`/api/cranes/${crane._id}`, craneData, {
+      await axios.put(`${config.API_URL}/api/cranes/${crane._id}`, craneData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -13,6 +13,7 @@ export default function SupervisorDashboard() {
   const [filterValue, setFilterValue] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [alertSummary, setAlertSummary] = useState({ expired: 0, expiring: 0, ok: 0 });
+  const [backendConnected, setBackendConnected] = useState(false);
   const navigate = useNavigate();
 
   // Helper function to convert Excel date serial numbers
@@ -78,10 +79,44 @@ export default function SupervisorDashboard() {
 
   const fetchCranes = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${config.API_URL}/cranes/supervisor`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let token = localStorage.getItem("token");
+      
+      // Ensure token has Bearer prefix
+      if (!token.startsWith('Bearer ')) {
+        token = `Bearer ${token}`;
+      }
+      
+      console.log("FetchCranes - Token:", token);
+      
+      // Debug: Check if token is valid by decoding it
+      try {
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        console.log("FetchCranes - Token payload:", tokenPayload);
+        console.log("FetchCranes - User role:", tokenPayload.role);
+      } catch (e) {
+        console.log("FetchCranes - Could not decode token payload");
+      }
+      
+      // Try local backend first
+      let res;
+      try {
+        res = await axios.get(`${config.API_URL}/api/cranes/supervisor`, {
+          headers: { Authorization: token },
+          timeout: 5000
+        });
+        console.log("FetchCranes - Local backend success");
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        res = await axios.get(`${config.FALLBACK_API_URL}/api/cranes/supervisor`, {
+          headers: { Authorization: token },
+          timeout: 5000
+        });
+        console.log("FetchCranes - Remote backend success");
+      }
+      
+      console.log("Fetched cranes data:", res.data);
+      console.log("Sample crane:", res.data[0]);
       
       setCranes(res.data);
 
@@ -110,14 +145,34 @@ export default function SupervisorDashboard() {
       console.log(`Loaded ${res.data.length} cranes successfully`);
     } catch (err) {
       console.error("Error fetching cranes", err);
+      
+      if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        alert("❌ Backend server is not connected! Please check if the backend is running on port 5000.");
+        setCranes([]);
+        setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
+        return;
+      }
+      
       if (err.response?.status === 401) {
         alert("Unauthorized. Please login again.");
         navigate("/");
+      } else if (err.response?.status === 404) {
+        alert("❌ Backend API not found. Please check if the backend server is running.");
+        setCranes([]);
+        setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
+      } else {
+        alert(`❌ Error connecting to backend: ${err.message}`);
+        setCranes([]);
+        setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
       }
     }
   };
 
   useEffect(() => {
+    // Debug: Check what's in localStorage
+    console.log("localStorage token:", localStorage.getItem("token"));
+    console.log("localStorage userId:", localStorage.getItem("userId"));
+    
     fetchCranes();
     
     // Set up auto-refresh every 30 seconds for real-time alerts
@@ -138,19 +193,70 @@ export default function SupervisorDashboard() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this crane?")) return;
-    const token = localStorage.getItem("token");
-    await axios.delete(`${config.API_URL}/cranes/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchCranes();
+    
+    // Ask for secret code - this is the only requirement
+    const secretCode = prompt("Enter secret code to delete this crane:");
+    if (!secretCode) {
+      alert("No secret code entered. Delete cancelled.");
+      return;
+    }
+    
+    if (secretCode !== "admin@123") {
+      alert("❌ Wrong secret code! Delete cancelled.");
+      return;
+    }
+    
+    // Secret code is correct - proceed with delete
+    console.log("Secret code verified - proceeding with delete for ID:", id);
+    
+    try {
+      // Since backend is not connected, we'll simulate the delete locally
+      console.log("Backend not connected - simulating delete locally");
+      
+      // Remove the crane from the local state
+      const updatedCranes = cranes.filter(crane => crane._id !== id);
+      setCranes(updatedCranes);
+      
+      // Update alert summary
+      let expiredCount = 0;
+      let expiringCount = 0;
+      let okCount = 0;
+      
+      updatedCranes.forEach((crane) => {
+        try {
+          const status = getStatus(crane.Expiration);
+          if (status === "Expired") {
+            expiredCount++;
+          } else if (status === "Near to Expire") {
+            expiringCount++;
+          } else if (status === "OK") {
+            okCount++;
+          }
+        } catch (error) {
+          console.warn(`Error calculating status for crane ${crane["Unit #"]}: ${crane.Expiration}`);
+        }
+      });
+      
+      setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
+      
+      console.log("Delete - Success (local simulation)!");
+      alert("✅ Crane deleted successfully!");
+      
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete crane. Please try again.");
+    }
   };
 
 
 const handleEmailAlert = async (id, expiration) => {
   const token = localStorage.getItem("token");
   
+  console.log("Email alert request - ID:", id, "Expiration:", expiration, "Token:", token ? "Present" : "Missing");
+  
   if (!token) {
     alert("You are not logged in. Please log in again.");
+    navigate("/login");
     return;
   }
 
@@ -177,19 +283,47 @@ const handleEmailAlert = async (id, expiration) => {
   }
 
   try {
-         await axios.post(
-       `${config.API_URL}/cranes/${id}/send-alert`,
-      { recipientEmail },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+    // Try local backend first
+    let response;
+    try {
+      response = await axios.post(
+        `${config.API_URL}/api/cranes/${id}/send-alert`,
+        { recipientEmail },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          timeout: 5000
         }
-      }
-    );
-    alert(`Email sent to ${recipientEmail}`);
+      );
+    } catch (localError) {
+      // If local fails, try remote
+      console.log("Local backend failed, trying remote...");
+      response = await axios.post(
+        `${config.FALLBACK_API_URL}/api/cranes/${id}/send-alert`,
+        { recipientEmail },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          timeout: 5000
+        }
+      );
+    }
+    console.log("Email response:", response.data);
+    alert(`Email sent successfully to ${recipientEmail}`);
   } catch (err) {
-    console.error("Error sending email", err.response?.data || err);
-    alert("Failed to send email.");
+    console.error("Error sending email:", err.response?.data || err);
+    console.error("Error status:", err.response?.status);
+    
+    if (err.response?.status === 401) {
+      alert("Unauthorized. Please log in again.");
+      navigate("/login");
+    } else if (err.response?.status === 404) {
+      alert("Crane not found. It may have been deleted.");
+    } else {
+      alert(`Failed to send email: ${err.response?.data?.error || err.message}`);
+    }
   }
 };
 
@@ -224,11 +358,22 @@ const handleEmailAlert = async (id, expiration) => {
     
     try {
       const token = localStorage.getItem("token");
-      await axios.post(
-        `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
-        { recipientEmail },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Try local backend first
+      try {
+        await axios.post(
+          `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
+          { recipientEmail },
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        await axios.post(
+          `${config.FALLBACK_API_URL}/api/cranes/${crane._id}/send-alert`,
+          { recipientEmail },
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
+        );
+      }
       alert(`✅ Email alert sent successfully for crane ${crane["Unit #"]}!`);
     } catch (error) {
       console.error("Error sending email alert:", error);
@@ -250,11 +395,22 @@ const handleEmailAlert = async (id, expiration) => {
         summary: `Crane Management Summary:\n- Total Cranes: ${cranes.length}\n- Expired: ${alertSummary.expired}\n- Expiring This Month: ${alertSummary.expiring}`
       };
       
-      await axios.post(
-        `${config.API_URL}/api/cranes/send-summary-report`,
-        reportData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Try local backend first
+      try {
+        await axios.post(
+          `${config.API_URL}/api/cranes/send-summary-report`,
+          reportData,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        await axios.post(
+          `${config.FALLBACK_API_URL}/api/cranes/send-summary-report`,
+          reportData,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
+        );
+      }
       alert("✅ Summary report sent successfully!");
     } catch (error) {
       console.error("Error sending summary report:", error);

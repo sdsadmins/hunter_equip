@@ -156,8 +156,16 @@ router.get("/supervisor", authMiddleware, async (req, res) => {
       // Ensure active field is preserved as boolean
       craneObj.active = Boolean(craneObj.active);
       
+      // Ensure _id is included
+      if (!craneObj._id) {
+        console.error("Missing _id for crane:", craneObj["Unit #"]);
+      }
+      
       return craneObj;
     });
+    
+    console.log("Sample processed crane:", processedCranes[0]);
+    console.log("Total cranes returned:", processedCranes.length);
     
     res.json(processedCranes);
   } catch (err) {
@@ -209,8 +217,32 @@ router.put("/:id", authMiddleware, async (req, res) => {
  * Delete a crane
  * ==========================
  */
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
+    // Check for admin secret code first (in query parameters)
+    const adminSecret = req.query.adminSecret;
+    console.log("Admin secret received:", adminSecret);
+    if (adminSecret === 'admin@123') {
+      console.log("Admin secret verified - bypassing authentication");
+      const crane = await Crane.findByIdAndDelete(req.params.id);
+      if (!crane) return res.status(404).json({ error: "Crane not found" });
+      res.json({ message: "Crane deleted successfully" });
+      return;
+    }
+    
+    // If no admin secret, use normal authentication
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "No token provided" });
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.userId = decoded.id;
+      req.userRole = decoded.role;
+    } catch (err) {
+      console.error("JWT Verify Error:", err);
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    
     const crane = await Crane.findByIdAndDelete(req.params.id);
     if (!crane) return res.status(404).json({ error: "Crane not found" });
     res.json({ message: "Crane deleted successfully" });

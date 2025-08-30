@@ -1,7 +1,7 @@
 /* Modern Supervisor Dashboard Styles */
 .supervisor-dashboard-wrapper {
   min-height: 100vh;
-  background: #000000;
+  background: #1a1a1a;
   position: relative;
 }
 
@@ -65,7 +65,7 @@
   max-width: 1600px;
   margin: 0 auto;
   padding: 30px 25px;
-  background: transparent;
+  background: #1a1a1a;
   border-radius: 0;
   box-shadow: none;
   position: relative;
