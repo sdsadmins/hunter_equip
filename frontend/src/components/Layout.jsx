@@ -48,6 +48,7 @@ const Layout = ({ children }) => {
               onLoad={() => {
                 console.log('Logo loaded successfully');
               }}
+              style={{ maxWidth: '100px', height: 'auto' }}
             />
           </div>
         </div>

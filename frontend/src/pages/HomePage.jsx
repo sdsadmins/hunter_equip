@@ -143,7 +143,15 @@ export default function HomePage() {
       setAlerts(newAlerts);
     } catch (err) {
       console.error("Error fetching cranes:", err);
-      alert("Failed to load cranes. Please check if the backend server is running.");
+      console.error("API URL used:", `${config.API_URL}/api/cranes/public`);
+      
+      if (err.response?.status === 404) {
+        alert("Crane data not found. Please contact administrator.");
+      } else if (err.code === 'ERR_NETWORK') {
+        alert("Network error. Please check your internet connection.");
+      } else {
+        alert("Failed to load cranes. Please try again later.");
+      }
     }
   };
 

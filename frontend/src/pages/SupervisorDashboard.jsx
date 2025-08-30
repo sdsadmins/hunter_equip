@@ -145,23 +145,24 @@ export default function SupervisorDashboard() {
       console.log(`Loaded ${res.data.length} cranes successfully`);
     } catch (err) {
       console.error("Error fetching cranes", err);
+      console.error("API URL used:", `${config.API_URL}/api/cranes/supervisor`);
       
       if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        alert("❌ Backend server is not connected! Please check if the backend is running on port 5000.");
+        alert("❌ Network error. Please check your internet connection.");
         setCranes([]);
         setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
         return;
       }
       
       if (err.response?.status === 401) {
-        alert("Unauthorized. Please login again.");
-        navigate("/");
+        alert("❌ Unauthorized. Please login again.");
+        navigate("/login");
       } else if (err.response?.status === 404) {
-        alert("❌ Backend API not found. Please check if the backend server is running.");
+        alert("❌ API endpoint not found. Please contact administrator.");
         setCranes([]);
         setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
       } else {
-        alert(`❌ Error connecting to backend: ${err.message}`);
+        alert(`❌ Error loading cranes: ${err.response?.data?.error || err.message}`);
         setCranes([]);
         setAlertSummary({ expired: 0, expiring: 0, ok: 0 });
       }
