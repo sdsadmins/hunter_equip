@@ -37,7 +37,7 @@ export default function ResetPassword() {
 
   const validateResetToken = async () => {
     try {
-      const res = await axios.get(`${config.API_URL}/auth/validate-reset-token?token=${token}`);
+      const res = await axios.get(`${config.API_URL}/api/auth/validate-reset-token?token=${token}`);
       setIsValidToken(true);
     } catch (err) {
       console.error("Token validation error:", err);
@@ -101,7 +101,7 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await axios.post(`${config.API_URL}/auth/reset-password`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/reset-password`, {
         token: token,
         password: form.password
       });
@@ -115,7 +115,7 @@ export default function ResetPassword() {
       
     } catch (err) {
       console.error("Reset password error:", err.response?.data || err);
-      console.error("API URL used:", `${config.API_URL}/auth/reset-password`);
+      console.error("API URL used:", `${config.API_URL}/api/auth/reset-password`);
       
       if (err.response?.status === 404) {
         setMessage("❌ Server not found. Please contact administrator.");

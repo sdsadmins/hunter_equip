@@ -21,7 +21,7 @@ export default function ForgotPassword() {
     }
 
     try {
-      const res = await axios.post(`${config.API_URL}/auth/forgot-password`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/forgot-password`, {
         email: email
       });
       setMessage("✅ Password reset link has been sent to your email. Please check your inbox.");
@@ -33,7 +33,7 @@ export default function ForgotPassword() {
       
     } catch (err) {
       console.error("Forgot password error:", err.response?.data || err);
-      console.error("API URL used:", `${config.API_URL}/auth/forgot-password`);
+      console.error("API URL used:", `${config.API_URL}/api/auth/forgot-password`);
       
       if (err.response?.status === 404) {
         setMessage("❌ This email is not registered with our system. Please check your email or register as a new user.");

@@ -71,7 +71,7 @@ export default function Register() {
     }
 
     try {
-      const res = await axios.post(`${config.API_URL}/auth/register`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/register`, {
         name: form.name,
         email: form.email,
         password: form.password
@@ -94,7 +94,7 @@ export default function Register() {
       
     } catch (err) {
       console.error("Registration error:", err.response?.data || err);
-      console.error("API URL used:", `${config.API_URL}/auth/register`);
+      console.error("API URL used:", `${config.API_URL}/api/auth/register`);
       console.error("Response status:", err.response?.status);
       console.error("Response data:", err.response?.data);
       
