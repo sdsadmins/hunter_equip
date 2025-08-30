@@ -40,9 +40,15 @@ export default function Login() {
       }, 1500);
     } catch (err) {
       console.error("Login error:", err.response?.data || err);
+      console.error("API URL used:", `${config.API_URL}/api/auth/login`);
       
-      // Use the specific error type from backend
-      if (err.response?.data?.errorType === "not_registered") {
+      if (err.response?.status === 404) {
+        setMessage("❌ Server not found. Please contact administrator.");
+        setErrorType("");
+      } else if (err.code === 'ERR_NETWORK') {
+        setMessage("❌ Network error. Please check your connection.");
+        setErrorType("");
+      } else if (err.response?.data?.errorType === "not_registered") {
         setMessage("❌ You're not registered yet. Please register first.");
         setErrorType("not_registered");
       } else if (err.response?.data?.errorType === "wrong_credentials") {

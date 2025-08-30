@@ -94,11 +94,17 @@ export default function Register() {
       
     } catch (err) {
       console.error("Registration error:", err.response?.data || err);
+      console.error("API URL used:", `${config.API_URL}/api/auth/register`);
       console.error("Response status:", err.response?.status);
       console.error("Response data:", err.response?.data);
       
-      // Handle specific error cases
-      if (err.response?.status === 409) {
+      if (err.response?.status === 404) {
+        setMessage("❌ Server not found. Please contact administrator.");
+        setIsDuplicateUser(false);
+      } else if (err.code === 'ERR_NETWORK') {
+        setMessage("❌ Network error. Please check your connection.");
+        setIsDuplicateUser(false);
+      } else if (err.response?.status === 409) {
         setMessage("❌ User already exists with this email address. Please go to login or use a different email.");
         setIsDuplicateUser(true);
       } else if (err.response?.data?.error) {
