@@ -110,6 +110,20 @@ export default function HomePage() {
       return;
     }
 
+    // First, test if backend is connected
+    try {
+      const testRes = await axios.get(`${config.API_URL}/api/test`, { timeout: 5000 });
+      console.log("✅ Backend connection test successful:", testRes.data);
+    } catch (testErr) {
+      console.error("❌ Backend connection test failed:", testErr);
+      if (testErr.code === 'ERR_NETWORK') {
+        alert("❌ Backend server is not connected. Please check if the server is running on the production server.");
+      } else {
+        alert("❌ Backend server error. Please contact administrator.");
+      }
+      return;
+    }
+
     try {
       const res = await axios.get(`${config.API_URL}/api/cranes/public`);
       // Cranes data loaded successfully
