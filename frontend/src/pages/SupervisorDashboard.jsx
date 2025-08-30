@@ -91,14 +91,14 @@ export default function SupervisorDashboard() {
       // Try local backend first
       let res;
       try {
-        res = await axios.get(`${config.API_URL}/api/cranes/supervisor`, {
+        res = await axios.get(`${config.API_URL}/cranes/supervisor`, {
           headers: { Authorization: token },
           timeout: 5000
         });
         // Local backend success
       } catch (localError) {
         // If local fails, try remote
-        res = await axios.get(`${config.FALLBACK_API_URL}/api/cranes/supervisor`, {
+        res = await axios.get(`${config.FALLBACK_API_URL}/cranes/supervisor`, {
           headers: { Authorization: token },
           timeout: 5000
         });
@@ -133,7 +133,7 @@ export default function SupervisorDashboard() {
       // Alert summary calculated successfully
     } catch (err) {
       console.error("Error fetching cranes", err);
-      console.error("API URL used:", `${config.API_URL}/api/cranes/supervisor`);
+      console.error("API URL used:", `${config.API_URL}/cranes/supervisor`);
       
       if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
         alert("❌ Network error. Please check your internet connection.");
@@ -274,7 +274,7 @@ const handleEmailAlert = async (id, expiration) => {
     let response;
     try {
       response = await axios.post(
-        `${config.API_URL}/api/cranes/${id}/send-alert`,
+        `${config.API_URL}/cranes/${id}/send-alert`,
         { recipientEmail },
         {
           headers: {
@@ -287,7 +287,7 @@ const handleEmailAlert = async (id, expiration) => {
       // If local fails, try remote
       console.log("Local backend failed, trying remote...");
       response = await axios.post(
-        `${config.FALLBACK_API_URL}/api/cranes/${id}/send-alert`,
+        `${config.FALLBACK_API_URL}/cranes/${id}/send-alert`,
         { recipientEmail },
         {
           headers: {
@@ -348,7 +348,7 @@ const handleEmailAlert = async (id, expiration) => {
       // Try local backend first
       try {
         await axios.post(
-          `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
+          `${config.API_URL}/cranes/${crane._id}/send-alert`,
           { recipientEmail },
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -356,7 +356,7 @@ const handleEmailAlert = async (id, expiration) => {
         // If local fails, try remote
         console.log("Local backend failed, trying remote...");
         await axios.post(
-          `${config.FALLBACK_API_URL}/api/cranes/${crane._id}/send-alert`,
+          `${config.FALLBACK_API_URL}/cranes/${crane._id}/send-alert`,
           { recipientEmail },
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -385,7 +385,7 @@ const handleEmailAlert = async (id, expiration) => {
       // Try local backend first
       try {
         await axios.post(
-          `${config.API_URL}/api/cranes/send-summary-report`,
+          `${config.API_URL}/cranes/send-summary-report`,
           reportData,
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -393,7 +393,7 @@ const handleEmailAlert = async (id, expiration) => {
         // If local fails, try remote
         console.log("Local backend failed, trying remote...");
         await axios.post(
-          `${config.FALLBACK_API_URL}/api/cranes/send-summary-report`,
+          `${config.FALLBACK_API_URL}/cranes/send-summary-report`,
           reportData,
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );

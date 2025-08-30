@@ -112,12 +112,12 @@ export default function HomePage() {
 
     // First, test if backend is connected
     try {
-      const testRes = await axios.get(`${config.API_URL}/api/test`, { timeout: 5000 });
+      const testRes = await axios.get(`${config.API_URL}/test`, { timeout: 5000 });
       console.log("✅ Backend connection test successful:", testRes.data);
     } catch (testErr) {
       console.error("❌ Backend connection test failed:", testErr);
       if (testErr.code === 'ERR_NETWORK') {
-        alert("❌ Backend server is not connected. Please check if the server is running on the production server.");
+        alert("❌ Backend server is not running. Please contact administrator to start the server.");
       } else {
         alert("❌ Backend server error. Please contact administrator.");
       }
@@ -125,7 +125,7 @@ export default function HomePage() {
     }
 
     try {
-      const res = await axios.get(`${config.API_URL}/api/cranes/public`);
+      const res = await axios.get(`${config.API_URL}/cranes/public`);
       // Cranes data loaded successfully
       
       // Sort cranes by expiration status
@@ -157,7 +157,7 @@ export default function HomePage() {
       setAlerts(newAlerts);
     } catch (err) {
       console.error("Error fetching cranes:", err);
-      console.error("API URL used:", `${config.API_URL}/api/cranes/public`);
+      console.error("API URL used:", `${config.API_URL}/cranes/public`);
       
       if (err.response?.status === 404) {
         alert("Crane data not found. Please contact administrator.");

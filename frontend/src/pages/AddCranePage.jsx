@@ -13,7 +13,7 @@ export default function AddCranePage() {
       }
 
       // ✅ Call backend to add new crane
-      await axios.post(`${config.API_URL}/api/cranes`, craneData, {
+      await axios.post(`${config.API_URL}/cranes`, craneData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -25,7 +25,7 @@ export default function AddCranePage() {
       window.close(); // close tab after success
     } catch (error) {
       console.error("Error saving crane:", error);
-      console.error("API URL used:", `${config.API_URL}/api/cranes`);
+      console.error("API URL used:", `${config.API_URL}/cranes`);
       
       if (error.response?.status === 401) {
         alert("❌ Unauthorized. Please login again.");
