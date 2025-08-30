@@ -21,14 +21,14 @@ app.use(cors({
 app.use(express.json());
 
 // Test route to check if server is working
-app.get("/api/test", (req, res) => {
+app.get("/test", (req, res) => {
   res.json({ message: "Server is working!" });
 });
 
 // Routes
-app.use("/api/cranes", craneRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/upload", uploadRoutes);
+app.use("/cranes", craneRoutes);
+app.use("/auth", authRoutes);
+app.use("/upload", uploadRoutes);
 
 // DB Connection
 const DB_URL = process.env.DB_URL || "mongodb://127.0.0.1:27017/crane_inspection";
