@@ -49,9 +49,19 @@ export default function EditCranePage() {
       window.close(); // close tab after success
     } catch (error) {
       console.error("Error updating crane:", error);
-      const errorMessage =
-        error.response?.data?.error || "Failed to update crane. Please try again.";
-      alert(`❌ Error: ${errorMessage}`);
+      console.error("API URL used:", `${config.API_URL}/api/cranes/${crane._id}`);
+      
+      if (error.response?.status === 401) {
+        alert("❌ Unauthorized. Please login again.");
+        window.close();
+      } else if (error.response?.status === 404) {
+        alert("❌ Server not found. Please contact administrator.");
+      } else if (error.code === 'ERR_NETWORK') {
+        alert("❌ Network error. Please check your connection.");
+      } else {
+        const errorMessage = error.response?.data?.error || "Failed to update crane. Please try again.";
+        alert(`❌ Error: ${errorMessage}`);
+      }
     }
   };
 

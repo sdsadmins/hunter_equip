@@ -33,10 +33,12 @@ export default function ForgotPassword() {
       
     } catch (err) {
       console.error("Forgot password error:", err.response?.data || err);
+      console.error("API URL used:", `${config.API_URL}/api/auth/forgot-password`);
       
-      // Check if user is not found (404 error)
       if (err.response?.status === 404) {
         setMessage("❌ This email is not registered with our system. Please check your email or register as a new user.");
+      } else if (err.code === 'ERR_NETWORK') {
+        setMessage("❌ Network error. Please check your connection.");
       } else {
         setMessage("❌ " + (err.response?.data?.message || "Failed to send reset email. Please try again."));
       }

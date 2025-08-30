@@ -86,16 +86,7 @@ export default function SupervisorDashboard() {
         token = `Bearer ${token}`;
       }
       
-      console.log("FetchCranes - Token:", token);
-      
-      // Debug: Check if token is valid by decoding it
-      try {
-        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-        console.log("FetchCranes - Token payload:", tokenPayload);
-        console.log("FetchCranes - User role:", tokenPayload.role);
-      } catch (e) {
-        console.log("FetchCranes - Could not decode token payload");
-      }
+      // Token validation for production
       
       // Try local backend first
       let res;
@@ -104,19 +95,17 @@ export default function SupervisorDashboard() {
           headers: { Authorization: token },
           timeout: 5000
         });
-        console.log("FetchCranes - Local backend success");
+        // Local backend success
       } catch (localError) {
         // If local fails, try remote
-        console.log("Local backend failed, trying remote...");
         res = await axios.get(`${config.FALLBACK_API_URL}/api/cranes/supervisor`, {
           headers: { Authorization: token },
           timeout: 5000
         });
-        console.log("FetchCranes - Remote backend success");
+        // Remote backend success
       }
       
-      console.log("Fetched cranes data:", res.data);
-      console.log("Sample crane:", res.data[0]);
+      // Cranes data loaded successfully
       
       setCranes(res.data);
 
@@ -141,8 +130,7 @@ export default function SupervisorDashboard() {
       });
       
       setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
-      console.log(`Alert Summary: ${expiredCount} expired, ${expiringCount} expiring within 30 days, ${okCount} OK`);
-      console.log(`Loaded ${res.data.length} cranes successfully`);
+      // Alert summary calculated successfully
     } catch (err) {
       console.error("Error fetching cranes", err);
       console.error("API URL used:", `${config.API_URL}/api/cranes/supervisor`);
@@ -170,9 +158,7 @@ export default function SupervisorDashboard() {
   };
 
   useEffect(() => {
-    // Debug: Check what's in localStorage
-    console.log("localStorage token:", localStorage.getItem("token"));
-    console.log("localStorage userId:", localStorage.getItem("userId"));
+    // Check authentication status
     
     fetchCranes();
     
@@ -208,11 +194,11 @@ export default function SupervisorDashboard() {
     }
     
     // Secret code is correct - proceed with delete
-    console.log("Secret code verified - proceeding with delete for ID:", id);
+          // Secret code verified - proceeding with delete
     
     try {
       // Since backend is not connected, we'll simulate the delete locally
-      console.log("Backend not connected - simulating delete locally");
+              // Backend not connected - simulating delete locally
       
       // Remove the crane from the local state
       const updatedCranes = cranes.filter(crane => crane._id !== id);
@@ -240,7 +226,7 @@ export default function SupervisorDashboard() {
       
       setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
       
-      console.log("Delete - Success (local simulation)!");
+              // Delete - Success (local simulation)!
       alert("✅ Crane deleted successfully!");
       
     } catch (err) {
@@ -253,7 +239,7 @@ export default function SupervisorDashboard() {
 const handleEmailAlert = async (id, expiration) => {
   const token = localStorage.getItem("token");
   
-  console.log("Email alert request - ID:", id, "Expiration:", expiration, "Token:", token ? "Present" : "Missing");
+        // Email alert request initiated
   
   if (!token) {
     alert("You are not logged in. Please log in again.");

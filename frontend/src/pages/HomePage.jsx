@@ -112,7 +112,7 @@ export default function HomePage() {
 
     try {
       const res = await axios.get(`${config.API_URL}/api/cranes/public`);
-      console.log("Fetched cranes:", res.data); // Debug log
+      // Cranes data loaded successfully
       
       // Sort cranes by expiration status
       const sortedCranes = sortCranesByExpiration(res.data);

@@ -115,7 +115,15 @@ export default function ResetPassword() {
       
     } catch (err) {
       console.error("Reset password error:", err.response?.data || err);
-      setMessage("❌ " + (err.response?.data?.message || "Failed to reset password. Please try again."));
+      console.error("API URL used:", `${config.API_URL}/api/auth/reset-password`);
+      
+      if (err.response?.status === 404) {
+        setMessage("❌ Server not found. Please contact administrator.");
+      } else if (err.code === 'ERR_NETWORK') {
+        setMessage("❌ Network error. Please check your connection.");
+      } else {
+        setMessage("❌ " + (err.response?.data?.message || "Failed to reset password. Please try again."));
+      }
     } finally {
       setIsLoading(false);
     }
