@@ -158,16 +158,14 @@ export default function SupervisorDashboard() {
   };
 
   useEffect(() => {
-    // Check authentication status
-    
-    fetchCranes();
-    
-    // Set up auto-refresh every 30 seconds for real-time alerts
-    const interval = setInterval(() => {
+    // First check if cranes exist in localStorage
+    const savedCranes = localStorage.getItem("cranes");
+    if (savedCranes) {
+      setCranes(JSON.parse(savedCranes));
+    } else {
+      // If nothing in localStorage, fetch from backend once
       fetchCranes();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
+    }
   }, []);
 
   const handleEdit = (crane) => {
