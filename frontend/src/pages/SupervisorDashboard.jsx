@@ -203,6 +203,8 @@ export default function SupervisorDashboard() {
       // Remove the crane from the local state
       const updatedCranes = cranes.filter(crane => crane._id !== id);
       setCranes(updatedCranes);
+      localStorage.setItem("cranes", JSON.stringify(updatedCranes));
+
       
       // Update alert summary
       let expiredCount = 0;

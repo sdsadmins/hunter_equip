@@ -194,14 +194,16 @@
 
 
 .dev-logo {
-  height: 28px;
-  width: auto;
-  margin-left: 0;
+  height: 40px !important;
+  width: auto !important;
+  margin-left: -20px;
   filter: brightness(1.2) contrast(1.1);
   object-fit: contain;
   display: flex;
   align-items: center;
   transition: transform 0.3s ease;
+  min-height: 40px;
+  max-height: none;
 }
 
 .dev-logo:hover {
@@ -256,7 +258,9 @@
   }
   
   .dev-logo {
-    height: 40px;
+    height: 40px !important;
+    min-height: 40px;
+    max-height: none;
   }
 }
 
