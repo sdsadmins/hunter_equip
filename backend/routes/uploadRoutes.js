@@ -53,8 +53,41 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No data found in Excel file" });
     }
 
-    // Clear old cranes
-    await Crane.deleteMany({});
+    // Check for duplicate Unit #s before processing
+    const existingCranes = await Crane.find({});
+    const existingUnitNumbers = new Set(existingCranes.map(crane => crane["Unit #"]));
+    
+    // Check for duplicates in the new data
+    const newUnitNumbers = new Set();
+    const duplicateUnitNumbers = [];
+    
+    sheetData.forEach((row, index) => {
+      const unitNumber = row["Unit #"] || row["Unit"] || row["unit"] || row["UNIT"] || row["Unit Number"] || row["unit number"] || "";
+      if (unitNumber) {
+        if (newUnitNumbers.has(unitNumber)) {
+          duplicateUnitNumbers.push({ row: index + 1, unitNumber });
+        } else if (existingUnitNumbers.has(unitNumber)) {
+          duplicateUnitNumbers.push({ row: index + 1, unitNumber, existing: true });
+        } else {
+          newUnitNumbers.add(unitNumber);
+        }
+      }
+    });
+    
+    // If there are duplicates, return error with details
+    if (duplicateUnitNumbers.length > 0) {
+      const duplicateDetails = duplicateUnitNumbers.map(dup => 
+        dup.existing 
+          ? `Row ${dup.row}: Unit # "${dup.unitNumber}" already exists in database`
+          : `Row ${dup.row}: Unit # "${dup.unitNumber}" appears multiple times in Excel file`
+      ).join('\n');
+      
+      return res.status(400).json({ 
+        error: "Duplicate Unit #s found", 
+        details: duplicateDetails,
+        duplicates: duplicateUnitNumbers
+      });
+    }
 
     // Save new cranes — mapping all required fields with flexible column name matching
     const cranes = sheetData.map((row, index) => {
@@ -85,7 +118,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       
       // Try different possible column names for each field - based on your Excel file
       const craneData = {
-        "Unit #": row["Unit #"] || row["Unit"] || row["unit"] || row["UNIT"] || row["Unit Number"] || row["unit number"] || "",
+        "Unit #": (row["Unit #"] || row["Unit"] || row["unit"] || row["UNIT"] || row["Unit Number"] || row["unit number"] || "").trim().replace(/\s+/g, ''),
         "Year": row["Year"] || row["year"] || row["YEAR"] || row["Model Year"] || row["model year"] || row["MODEL YEAR"] || "",
         "Make and Model": row["Make and Model"] || row["Make & Model"] || row["Make and model"] || row["make and model"] || row["MAKE AND MODEL"] || row["Make"] || row["make"] || row["Model"] || row["model"] || "",
         "Ton": row["Ton"] || row["ton"] || row["TON"] || row["Capacity"] || row["capacity"] || row["CAPACITY"] || row["Tonnage"] || row["tonnage"] || row["TONNAGE"] || "",

@@ -21,7 +21,14 @@ export default function ExcelUpload({ onUploadComplete }) {
     } catch (error) {
       console.error("Upload error:", error);
       console.error("Error response:", error.response?.data);
-      alert(`❌ Upload failed: ${error.response?.data?.error || error.message}`);
+      
+      // Handle duplicate Unit # errors specifically
+      if (error.response?.data?.error === "Duplicate Unit #s found") {
+        const details = error.response.data.details;
+        alert(`❌ Upload failed: Duplicate Unit #s found!\n\n${details}\n\nPlease fix the duplicates and try again.`);
+      } else {
+        alert(`❌ Upload failed: ${error.response?.data?.error || error.message}`);
+      }
     }
   };
 

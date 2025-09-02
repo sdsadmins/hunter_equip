@@ -134,15 +134,26 @@ export default function CraneForm({ crane, onSave, onClose }) {
 
         <form onSubmit={handleSubmit} className="crane-form">
           <div className="form-group">
-            <label htmlFor="unit">Unit # *</label>
+            <label htmlFor="unit">
+              Unit # * 
+              {crane && <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '8px' }}>(Read-only)</span>}
+            </label>
             <input
               id="unit"
               name="Unit #"
               type="text"
               placeholder="e.g., C-157"
               value={form["Unit #"]}
-              onChange={handleChange}
+              onChange={crane ? undefined : handleChange}
               required
+              readOnly={crane ? true : false}
+              style={{ 
+                border: '1px solid #ccc',
+                backgroundColor: crane ? '#f8f9fa' : '#e8f5e8',
+                color: crane ? '#495057' : '#2c5aa0',
+                fontWeight: '600',
+                cursor: crane ? 'not-allowed' : 'text'
+              }}
             />
           </div>
 

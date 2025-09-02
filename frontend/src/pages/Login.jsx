@@ -23,7 +23,7 @@ export default function Login() {
     setMessage("");
 
     try {
-      const res = await axios.post(`${config.API_URL}/auth/login`, {
+      const res = await axios.post(`${config.API_URL}/api/auth/login`, {
         email: form.email,
         password: form.password,
       });
@@ -40,7 +40,7 @@ export default function Login() {
       }, 1500);
     } catch (err) {
       console.error("Login error:", err.response?.data || err);
-      console.error("API URL used:", `${config.API_URL}/auth/login`);
+              console.error("API URL used:", `${config.API_URL}/api/auth/login`);
       
       if (err.response?.status === 404) {
         setMessage("❌ Server not found. Please contact administrator.");

@@ -81,32 +81,44 @@ export default function SupervisorDashboard() {
     try {
       let token = localStorage.getItem("token");
       
+      if (!token) {
+        console.log("❌ No token found in localStorage");
+        alert("❌ You are not logged in. Please login first.");
+        navigate("/login");
+        return;
+      }
+      
       // Ensure token has Bearer prefix
       if (!token.startsWith('Bearer ')) {
         token = `Bearer ${token}`;
       }
       
-      // Token validation for production
+      console.log("🔍 Fetching cranes from backend...");
+      console.log("📍 API URL:", `${config.API_URL}/api/cranes/supervisor`);
+      console.log("🔑 Token:", token.substring(0, 20) + "...");
       
       // Try local backend first
       let res;
       try {
-        res = await axios.get(`${config.API_URL}/cranes/supervisor`, {
+        console.log("🌐 Trying local backend...");
+        res = await axios.get(`${config.API_URL}/api/cranes/supervisor`, {
           headers: { Authorization: token },
           timeout: 5000
         });
-        // Local backend success
+        console.log("✅ Local backend success, cranes received:", res.data.length);
       } catch (localError) {
+        console.log("❌ Local backend failed, trying remote...");
         // If local fails, try remote
-        res = await axios.get(`${config.FALLBACK_API_URL}/cranes/supervisor`, {
+        res = await axios.get(`${config.FALLBACK_API_URL}/api/cranes/supervisor`, {
           headers: { Authorization: token },
           timeout: 5000
         });
-        // Remote backend success
+        console.log("✅ Remote backend success, cranes received:", res.data.length);
       }
       
       // Cranes data loaded successfully
       
+      console.log("📊 Processing cranes data:", res.data);
       setCranes(res.data);
 
       // Calculate alert summary using the same logic as getStatus function
@@ -129,11 +141,12 @@ export default function SupervisorDashboard() {
         }
       });
       
+      console.log("🚨 Alert summary calculated:", { expired: expiredCount, expiring: expiringCount, ok: okCount });
       setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
       // Alert summary calculated successfully
     } catch (err) {
       console.error("Error fetching cranes", err);
-      console.error("API URL used:", `${config.API_URL}/cranes/supervisor`);
+      console.error("API URL used:", `${config.API_URL}/api/cranes/supervisor`);
       
       if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
         alert("❌ Network error. Please check your internet connection.");
@@ -158,14 +171,8 @@ export default function SupervisorDashboard() {
   };
 
   useEffect(() => {
-    // First check if cranes exist in localStorage
-    const savedCranes = localStorage.getItem("cranes");
-    if (savedCranes) {
-      setCranes(JSON.parse(savedCranes));
-    } else {
-      // If nothing in localStorage, fetch from backend once
-      fetchCranes();
-    }
+    // Always try to fetch from backend first
+    fetchCranes();
   }, []);
 
   const handleEdit = (crane) => {
@@ -192,46 +199,71 @@ export default function SupervisorDashboard() {
     }
     
     // Secret code is correct - proceed with delete
-          // Secret code verified - proceeding with delete
-    
     try {
-      // Since backend is not connected, we'll simulate the delete locally
-              // Backend not connected - simulating delete locally
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("❌ You are not logged in. Please login again.");
+        navigate("/login");
+        return;
+      }
       
-      // Remove the crane from the local state
-      const updatedCranes = cranes.filter(crane => crane._id !== id);
-      setCranes(updatedCranes);
-      localStorage.setItem("cranes", JSON.stringify(updatedCranes));
-
+      // Try local backend first
+      let response;
+      try {
+        response = await axios.delete(
+          `${config.API_URL}/api/cranes/${id}`,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        response = await axios.delete(
+          `${config.FALLBACK_API_URL}/api/cranes/${id}`,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      }
       
-      // Update alert summary
-      let expiredCount = 0;
-      let expiringCount = 0;
-      let okCount = 0;
-      
-      updatedCranes.forEach((crane) => {
-        try {
-          const status = getStatus(crane.Expiration);
-          if (status === "Expired") {
-            expiredCount++;
-          } else if (status === "Near to Expire") {
-            expiringCount++;
-          } else if (status === "OK") {
-            okCount++;
+      if (response.status === 200 || response.status === 204) {
+        // Remove the crane from the local state
+        const updatedCranes = cranes.filter(crane => crane._id !== id);
+        setCranes(updatedCranes);
+        
+        // Update alert summary
+        let expiredCount = 0;
+        let expiringCount = 0;
+        let okCount = 0;
+        
+        updatedCranes.forEach((crane) => {
+          try {
+            const status = getStatus(crane.Expiration);
+            if (status === "Expired") {
+              expiredCount++;
+            } else if (status === "Near to Expire") {
+              expiringCount++;
+            } else if (status === "OK") {
+              okCount++;
+            }
+          } catch (error) {
+            console.warn(`Error calculating status for crane ${crane["Unit #"]}: ${crane.Expiration}`);
           }
-        } catch (error) {
-          console.warn(`Error calculating status for crane ${crane["Unit #"]}: ${crane.Expiration}`);
-        }
-      });
-      
-      setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
-      
-              // Delete - Success (local simulation)!
-      alert("✅ Crane deleted successfully!");
+        });
+        
+        setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
+        
+        alert("✅ Crane deleted successfully from database!");
+      } else {
+        alert("❌ Failed to delete crane from database. Please try again.");
+      }
       
     } catch (err) {
       console.error("Delete error:", err);
-      alert("Failed to delete crane. Please try again.");
+      if (err.response?.status === 404) {
+        alert("❌ Crane not found in database.");
+      } else if (err.response?.status === 403) {
+        alert("❌ Access denied. You don't have permission to delete cranes.");
+      } else {
+        alert(`❌ Failed to delete crane: ${err.response?.data?.error || err.message}`);
+      }
     }
   };
 
@@ -273,8 +305,8 @@ const handleEmailAlert = async (id, expiration) => {
     // Try local backend first
     let response;
     try {
-      response = await axios.post(
-        `${config.API_URL}/cranes/${id}/send-alert`,
+              response = await axios.post(
+          `${config.API_URL}/api/cranes/${id}/send-alert`,
         { recipientEmail },
         {
           headers: {
@@ -286,8 +318,8 @@ const handleEmailAlert = async (id, expiration) => {
     } catch (localError) {
       // If local fails, try remote
       console.log("Local backend failed, trying remote...");
-      response = await axios.post(
-        `${config.FALLBACK_API_URL}/cranes/${id}/send-alert`,
+              response = await axios.post(
+          `${config.FALLBACK_API_URL}/api/cranes/${id}/send-alert`,
         { recipientEmail },
         {
           headers: {
@@ -348,7 +380,7 @@ const handleEmailAlert = async (id, expiration) => {
       // Try local backend first
       try {
         await axios.post(
-          `${config.API_URL}/cranes/${crane._id}/send-alert`,
+          `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
           { recipientEmail },
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -356,7 +388,7 @@ const handleEmailAlert = async (id, expiration) => {
         // If local fails, try remote
         console.log("Local backend failed, trying remote...");
         await axios.post(
-          `${config.FALLBACK_API_URL}/cranes/${crane._id}/send-alert`,
+          `${config.FALLBACK_API_URL}/api/cranes/${crane._id}/send-alert`,
           { recipientEmail },
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -385,7 +417,7 @@ const handleEmailAlert = async (id, expiration) => {
       // Try local backend first
       try {
         await axios.post(
-          `${config.API_URL}/cranes/send-summary-report`,
+          `${config.API_URL}/api/cranes/send-summary-report`,
           reportData,
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -393,7 +425,7 @@ const handleEmailAlert = async (id, expiration) => {
         // If local fails, try remote
         console.log("Local backend failed, trying remote...");
         await axios.post(
-          `${config.FALLBACK_API_URL}/cranes/send-summary-report`,
+          `${config.FALLBACK_API_URL}/api/cranes/send-summary-report`,
           reportData,
           { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
         );
@@ -402,6 +434,79 @@ const handleEmailAlert = async (id, expiration) => {
     } catch (error) {
       console.error("Error sending summary report:", error);
       alert(`❌ Failed to send summary report: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
+  const handleCleanUnitNumbers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("❌ You are not logged in. Please login again.");
+        navigate("/login");
+        return;
+      }
+      
+      console.log("🧹 Checking for duplicates first...");
+      
+      // First check for duplicates
+      let checkResponse;
+      try {
+        checkResponse = await axios.get(
+          `${config.API_URL}/api/cranes/check-duplicates`,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        checkResponse = await axios.get(
+          `${config.FALLBACK_API_URL}/api/cranes/check-duplicates`,
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      }
+
+      if (checkResponse.data.hasDuplicates) {
+        const confirmMessage = `⚠️ Found ${checkResponse.data.duplicateCount} Unit #s with duplicates:\n\n${checkResponse.data.duplicateDetails.map(d => 
+          `• ${d.unitNumber}: ${d.count} cranes\n  - ${d.cranes.map(c => `${c.makeModel} (${c.serial})`).join('\n  - ')}`
+        ).join('\n\n')}\n\nThis is why delete operations don't work properly!\n\nDo you want to clean all duplicates? (This will keep only 1 crane per Unit #)`;
+        
+        if (!window.confirm(confirmMessage)) {
+          return;
+        }
+      }
+      
+      console.log("🧹 Cleaning Unit #s...");
+      
+      // Try local backend first
+      let response;
+      try {
+        response = await axios.post(
+          `${config.API_URL}/api/cranes/clean-unit-numbers`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        response = await axios.post(
+          `${config.FALLBACK_API_URL}/api/cranes/clean-unit-numbers`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      }
+      
+      const result = response.data;
+      alert(`✅ Unit # cleaning completed!\n\nSpaces cleaned: ${result.spacesCleaned || 0}\nDuplicates resolved: ${result.duplicatesResolved || 0}\nTotal duplicates found: ${result.totalDuplicatesFound || 0}\n\nPlease refresh the page to see the updated data.`);
+      
+      // Refresh the cranes data
+      fetchCranes();
+      
+    } catch (error) {
+      console.error("Error cleaning Unit #s:", error);
+      if (error.response?.status === 403) {
+        alert("❌ Access denied. Only supervisors can clean Unit #s.");
+      } else {
+        alert(`❌ Error cleaning Unit #s: ${error.response?.data?.error || error.message}`);
+      }
     }
   };
 
@@ -519,20 +624,52 @@ const handleEmailAlert = async (id, expiration) => {
     printWindow.document.close();
   };
 
+  // Helper function to check for duplicate Unit #s
+  const getDuplicateUnitNumbers = () => {
+    const unitCounts = {};
+    cranes.forEach(crane => {
+      const unit = crane["Unit #"];
+      unitCounts[unit] = (unitCounts[unit] || 0) + 1;
+    });
+    return Object.keys(unitCounts).filter(unit => unitCounts[unit] > 1);
+  };
+
+  const duplicateUnits = getDuplicateUnitNumbers();
+
   // Apply filter + status + sort
   const filteredCranes = cranes
     .map((crane) => ({
       ...crane,
       status: getStatus(crane.Expiration),
-      active: Boolean(crane.active) // Ensure active is boolean
+      active: Boolean(crane.active), // Ensure active is boolean
+      isDuplicate: duplicateUnits.includes(crane["Unit #"]) // Mark duplicate Unit #s
     }))
     .filter((crane) => {
       if (!filterValue.trim()) return true;
-      const search = filterValue.toLowerCase();
+      
+      const search = filterValue.toLowerCase().trim();
+      const unitNumber = crane["Unit #"]?.toLowerCase() || '';
+      const makeModel = crane["Make and Model"]?.toLowerCase() || '';
+      const serialNumber = crane["Serial #"]?.toLowerCase() || '';
+      const year = crane["Year"]?.toLowerCase() || '';
+      const ton = crane["Ton"]?.toLowerCase() || '';
+      
+      // Smart search with priority matching
+      // 1. Exact Unit # match (highest priority)
+      if (unitNumber === search) return true;
+      
+      // 2. Unit # starts with search term
+      if (unitNumber.startsWith(search)) return true;
+      
+      // 3. Unit # contains search term (but not too broad)
+      if (search.length >= 3 && unitNumber.includes(search)) return true;
+      
+      // 4. Other field matches
       return (
-        crane["Unit #"]?.toLowerCase().includes(search) ||
-        crane["Make and Model"]?.toLowerCase().includes(search) ||
-        crane.Expiration?.toLowerCase().includes(search)
+        makeModel.includes(search) ||
+        serialNumber.includes(search) ||
+        year.includes(search) ||
+        ton.includes(search)
       );
     })
     .sort((a, b) => {
@@ -617,13 +754,48 @@ const handleEmailAlert = async (id, expiration) => {
           </div>
           
           <div className="search-controls">
-            <input
-              type="text"
-              placeholder="🔍 Search cranes by unit, model, or serial..."
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              className="search-input"
-            />
+            <div className="search-container">
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search: Unit #, Model, Serial, Year..."
+                  value={filterValue}
+                  onChange={(e) => setFilterValue(e.target.value)}
+                  className="search-input"
+                  title="Search by Unit # (exact or starts with), Make & Model, Serial #, Year, or Ton"
+                />
+                {filterValue && (
+                  <button
+                    onClick={() => setFilterValue('')}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {filterValue && (
+                <div className="search-help">
+                  <small>
+                    Showing {filteredCranes.length} of {cranes.length} cranes
+                    {filterValue.length < 3 && filteredCranes.length > 10 && (
+                      <span style={{color: '#ff9800'}}> • Tip: Type 3+ characters for better results</span>
+                    )}
+                    {filterValue.length >= 3 && (
+                      <span style={{color: '#4caf50'}}> • Search: "{filterValue}"</span>
+                    )}
+                  </small>
+                </div>
+              )}
+            </div>
             <a 
     href="/add-crane" 
     target="_blank" 
@@ -638,11 +810,67 @@ const handleEmailAlert = async (id, expiration) => {
   >
     📄 Print All Cranes
   </button>
+
             <button className="btn btn-danger" onClick={handleLogout}>
               🚪 Logout
             </button>
           </div>
         </div>
+
+        {duplicateUnits.length > 0 && (
+          <div className="duplicate-warning" style={{
+            background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+            color: 'white',
+            padding: '15px 20px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 8px 25px rgba(255, 152, 0, 0.3)'
+          }}>
+            <div>
+              <strong>⚠️ Duplicate Unit #s Detected!</strong>
+              <br />
+              Found {duplicateUnits.length} Unit #s with duplicates: {duplicateUnits.join(', ')}
+              <br />
+              <small style={{opacity: 0.9}}>
+                This is why delete operations may not work properly. Clean duplicates first!
+              </small>
+            </div>
+            <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+              <button 
+                onClick={handleCleanUnitNumbers}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                🧹 Clean Now
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+                title="Refresh to see updated data"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="table-section">
           <CraneTable

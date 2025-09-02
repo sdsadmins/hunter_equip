@@ -15,6 +15,9 @@ export default function EditCranePage() {
     if (craneData) {
       try {
         const parsedCrane = JSON.parse(decodeURIComponent(craneData));
+        console.log("🔍 Parsed crane data:", parsedCrane);
+        console.log("🔍 Unit # field value:", parsedCrane["Unit #"]);
+        console.log("🔍 All field names:", Object.keys(parsedCrane));
         setCrane(parsedCrane);
       } catch (error) {
         console.error("Error parsing crane data:", error);
@@ -37,7 +40,7 @@ export default function EditCranePage() {
       }
 
       // Update existing crane
-      await axios.put(`${config.API_URL}/cranes/${crane._id}`, craneData, {
+      await axios.put(`${config.API_URL}/api/cranes/${crane._id}`, craneData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -49,7 +52,7 @@ export default function EditCranePage() {
       window.close(); // close tab after success
     } catch (error) {
       console.error("Error updating crane:", error);
-      console.error("API URL used:", `${config.API_URL}/cranes/${crane._id}`);
+      console.error("API URL used:", `${config.API_URL}/api/cranes/${crane._id}`);
       
       if (error.response?.status === 401) {
         alert("❌ Unauthorized. Please login again.");
@@ -58,6 +61,9 @@ export default function EditCranePage() {
         alert("❌ Server not found. Please contact administrator.");
       } else if (error.code === 'ERR_NETWORK') {
         alert("❌ Network error. Please check your connection.");
+      } else if (error.response?.data?.error === "Crane with this Unit # already exists") {
+        const existingCrane = error.response.data.existingCrane;
+        alert(`❌ Error: ${error.response.data.error}\n\nExisting crane details:\n- Unit #: ${existingCrane.unitNumber}\n- Make & Model: ${existingCrane.makeModel}\n- Serial #: ${existingCrane.serial}\n\nPlease use a different Unit #.`);
       } else {
         const errorMessage = error.response?.data?.error || "Failed to update crane. Please try again.";
         alert(`❌ Error: ${errorMessage}`);

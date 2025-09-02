@@ -13,6 +13,22 @@ router.get("/test", (req, res) => {
   res.json({ message: "Crane routes server is working!" });
 });
 
+// Test route to check if database has cranes (no auth required)
+router.get("/test-data", async (req, res) => {
+  try {
+    const cranes = await Crane.find();
+    console.log("Test data - All cranes in DB:", cranes);
+    res.json({ 
+      message: "Database test", 
+      count: cranes.length,
+      sampleCrane: cranes[0] || "No cranes found"
+    });
+  } catch (err) {
+    console.error("Test data error:", err);
+    res.status(500).json({ error: "Database test failed" });
+  }
+});
+
 // Test route to check database data
 router.get("/test-data", async (req, res) => {
   try {
@@ -27,6 +43,16 @@ router.get("/test-data", async (req, res) => {
     console.error("Test data error:", err);
     res.status(500).json({ error: "Database test failed" });
   }
+});
+
+// Test route to check authentication (no auth required)
+router.get("/test-auth", (req, res) => {
+  const authHeader = req.headers.authorization;
+  res.json({ 
+    message: "Auth test", 
+    hasAuthHeader: !!authHeader,
+    authHeader: authHeader ? authHeader.substring(0, 20) + "..." : "None"
+  });
 });
 
 // Middleware for authentication
@@ -181,10 +207,37 @@ router.get("/supervisor", authMiddleware, async (req, res) => {
  */
 router.post("/", authMiddleware, async (req, res) => {
   try {
+    // Clean the Unit # by removing spaces and normalizing
+    const cleanUnitNumber = req.body["Unit #"] ? req.body["Unit #"].trim().replace(/\s+/g, '') : '';
+    
+    if (!cleanUnitNumber) {
+      return res.status(400).json({ error: "Unit # is required and cannot be empty" });
+    }
+    
+    // Check if crane with same Unit # already exists (case-insensitive and space-insensitive)
+    const existingCrane = await Crane.findOne({ 
+      "Unit #": { $regex: new RegExp(`^${cleanUnitNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+    
+    if (existingCrane) {
+      return res.status(400).json({ 
+        error: "Crane with this Unit # already exists",
+        existingCrane: {
+          unitNumber: existingCrane["Unit #"],
+          makeModel: existingCrane["Make and Model"],
+          serial: existingCrane["Serial #"]
+        }
+      });
+    }
+    
+    // Update the request body with cleaned Unit #
+    req.body["Unit #"] = cleanUnitNumber;
+    
     const crane = new Crane(req.body);
     await crane.save();
     res.json(crane);
   } catch (err) {
+    console.error("Error adding crane:", err);
     res.status(500).json({ error: "Error adding crane" });
   }
 });
@@ -196,6 +249,37 @@ router.post("/", authMiddleware, async (req, res) => {
  */
 router.put("/:id", authMiddleware, async (req, res) => {
   try {
+    // If Unit # is being updated, check for duplicates
+    if (req.body["Unit #"]) {
+      // Clean the Unit # by removing spaces and normalizing
+      const cleanUnitNumber = req.body["Unit #"].trim().replace(/\s+/g, '');
+      
+      if (!cleanUnitNumber) {
+        return res.status(400).json({ error: "Unit # is required and cannot be empty" });
+      }
+      
+      // Check if crane with same Unit # already exists (excluding current crane)
+      const existingCrane = await Crane.findOne({ 
+        "Unit #": { $regex: new RegExp(`^${cleanUnitNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        _id: { $ne: req.params.id } // Exclude current crane from duplicate check
+      });
+      
+      if (existingCrane) {
+        return res.status(400).json({ 
+          error: "Crane with this Unit # already exists",
+          existingCrane: {
+            unitNumber: existingCrane["Unit #"],
+            makeModel: existingCrane["Make and Model"],
+            serial: existingCrane["Serial #"],
+            id: existingCrane._id
+          }
+        });
+      }
+      
+      // Update the request body with cleaned Unit #
+      req.body["Unit #"] = cleanUnitNumber;
+    }
+    
     // Ensure active field is explicitly set as boolean
     const updateData = {
       ...req.body,
@@ -217,36 +301,13 @@ router.put("/:id", authMiddleware, async (req, res) => {
  * Delete a crane
  * ==========================
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    // Check for admin secret code first (in query parameters)
-    const adminSecret = req.query.adminSecret;
-    console.log("Admin secret received:", adminSecret);
-    if (adminSecret === 'admin@123') {
-      console.log("Admin secret verified - bypassing authentication");
-      const crane = await Crane.findByIdAndDelete(req.params.id);
-      if (!crane) return res.status(404).json({ error: "Crane not found" });
-      res.json({ message: "Crane deleted successfully" });
-      return;
-    }
-    
-    // If no admin secret, use normal authentication
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "No token provided" });
-
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.userId = decoded.id;
-      req.userRole = decoded.role;
-    } catch (err) {
-      console.error("JWT Verify Error:", err);
-      return res.status(401).json({ error: "Invalid token" });
-    }
-    
     const crane = await Crane.findByIdAndDelete(req.params.id);
     if (!crane) return res.status(404).json({ error: "Crane not found" });
     res.json({ message: "Crane deleted successfully" });
   } catch (err) {
+    console.error("Error deleting crane:", err);
     res.status(500).json({ error: "Error deleting crane" });
   }
 });
@@ -650,6 +711,208 @@ Crane Management Team
       details: error.message,
       code: error.code
     });
+  }
+});
+
+/**
+ * ==========================
+ * Clean Unit # spaces and duplicates in database
+ * ==========================
+ */
+router.post("/clean-unit-numbers", authMiddleware, async (req, res) => {
+  try {
+    // Only allow supervisors to clean data
+    if (req.userRole !== "supervisor") {
+      return res.status(403).json({ error: "Access denied: Supervisors only" });
+    }
+    
+    console.log("🧹 Cleaning Unit # spaces and duplicates in database...");
+    
+    // Step 1: Clean spaces from Unit #s
+    const cranesWithSpaces = await Crane.find({
+      "Unit #": { $regex: /\s/ }
+    });
+    
+    console.log(`Found ${cranesWithSpaces.length} cranes with spaces in Unit #`);
+    
+    let cleanedCount = 0;
+    let duplicateCount = 0;
+    
+    for (const crane of cranesWithSpaces) {
+      const oldUnitNumber = crane["Unit #"];
+      const newUnitNumber = oldUnitNumber.trim().replace(/\s+/g, '');
+      
+      if (oldUnitNumber !== newUnitNumber) {
+        // Check if the cleaned Unit # already exists
+        const existingCrane = await Crane.findOne({
+          "Unit #": newUnitNumber,
+          _id: { $ne: crane._id } // Exclude current crane
+        });
+        
+        if (existingCrane) {
+          console.log(`⚠️ Duplicate found: ${oldUnitNumber} -> ${newUnitNumber} (already exists)`);
+          duplicateCount++;
+        } else {
+          // Update the crane with cleaned Unit #
+          await Crane.findByIdAndUpdate(crane._id, {
+            "Unit #": newUnitNumber
+          });
+          console.log(`✅ Cleaned: "${oldUnitNumber}" -> "${newUnitNumber}"`);
+          cleanedCount++;
+        }
+      }
+    }
+    
+    // Step 2: Handle actual duplicates (multiple cranes with same Unit #)
+    console.log("🔍 Checking for duplicate Unit #s...");
+    
+    // Find all Unit #s and count them
+    const unitCounts = {};
+    const allCranes = await Crane.find({});
+    
+    allCranes.forEach(crane => {
+      const unit = crane["Unit #"];
+      if (unit) {
+        unitCounts[unit] = (unitCounts[unit] || 0) + 1;
+      }
+    });
+    
+    // Find Unit #s with duplicates
+    const duplicateUnits = Object.keys(unitCounts).filter(unit => unitCounts[unit] > 1);
+    console.log(`Found ${duplicateUnits.length} Unit #s with duplicates:`, duplicateUnits);
+    
+    let resolvedDuplicates = 0;
+    
+    for (const duplicateUnit of duplicateUnits) {
+      // Get all cranes with this Unit #
+      const duplicateCranes = await Crane.find({ "Unit #": duplicateUnit });
+      console.log(`Processing ${duplicateCranes.length} cranes with Unit # "${duplicateUnit}"`);
+      
+      // Keep the first one, delete the rest
+      if (duplicateCranes.length > 1) {
+        const [keepCrane, ...deleteCranes] = duplicateCranes;
+        
+        console.log(`✅ Keeping crane: ${keepCrane._id} (${keepCrane["Make and Model"]})`);
+        
+        // Delete duplicate cranes
+        for (const deleteCrane of deleteCranes) {
+          console.log(`🗑️ Deleting duplicate crane: ${deleteCrane._id} (${deleteCrane["Make and Model"]})`);
+          await Crane.findByIdAndDelete(deleteCrane._id);
+        }
+        
+        resolvedDuplicates += deleteCranes.length;
+      }
+    }
+    
+    res.json({
+      message: "Unit # cleaning and duplicate resolution completed",
+      spacesCleaned: cleanedCount,
+      duplicatesResolved: resolvedDuplicates,
+      totalDuplicatesFound: duplicateUnits.length,
+      duplicateUnits: duplicateUnits
+    });
+    
+  } catch (err) {
+    console.error("Error cleaning Unit #s:", err);
+    res.status(500).json({ error: "Error cleaning Unit #s" });
+  }
+});
+
+/**
+ * ==========================
+ * Check for duplicate Unit #s in database
+ * ==========================
+ */
+router.get("/check-duplicates", authMiddleware, async (req, res) => {
+  try {
+    // Only allow supervisors to check duplicates
+    if (req.userRole !== "supervisor") {
+      return res.status(403).json({ error: "Access denied: Supervisors only" });
+    }
+    
+    console.log("🔍 Checking for duplicate Unit #s...");
+    
+    // Find all Unit #s and count them
+    const unitCounts = {};
+    const allCranes = await Crane.find({});
+    
+    allCranes.forEach(crane => {
+      const unit = crane["Unit #"];
+      if (unit) {
+        unitCounts[unit] = (unitCounts[unit] || 0) + 1;
+      }
+    });
+    
+    // Find Unit #s with duplicates
+    const duplicateUnits = Object.keys(unitCounts).filter(unit => unitCounts[unit] > 1);
+    
+    // Get detailed info about duplicates
+    const duplicateDetails = [];
+    for (const duplicateUnit of duplicateUnits) {
+      const duplicateCranes = await Crane.find({ "Unit #": duplicateUnit });
+      duplicateDetails.push({
+        unitNumber: duplicateUnit,
+        count: duplicateCranes.length,
+        cranes: duplicateCranes.map(crane => ({
+          id: crane._id,
+          makeModel: crane["Make and Model"],
+          serial: crane["Serial #"],
+          year: crane["Year"],
+          expiration: crane["Expiration"]
+        }))
+      });
+    }
+    
+    res.json({
+      hasDuplicates: duplicateUnits.length > 0,
+      duplicateCount: duplicateUnits.length,
+      duplicateUnits: duplicateUnits,
+      duplicateDetails: duplicateDetails
+    });
+    
+  } catch (err) {
+    console.error("Error checking duplicates:", err);
+    res.status(500).json({ error: "Error checking duplicates" });
+  }
+});
+
+/**
+ * ==========================
+ * Check if Unit # exists
+ * ==========================
+ */
+router.get("/check-unit/:unitNumber", authMiddleware, async (req, res) => {
+  try {
+    const { unitNumber } = req.params;
+    
+    // Clean the Unit # by removing spaces and normalizing
+    const cleanUnitNumber = unitNumber ? unitNumber.trim().replace(/\s+/g, '') : '';
+    
+    if (!cleanUnitNumber) {
+      return res.json({ exists: false });
+    }
+    
+    // Check if crane with same Unit # already exists (case-insensitive and space-insensitive)
+    const existingCrane = await Crane.findOne({ 
+      "Unit #": { $regex: new RegExp(`^${cleanUnitNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+    
+    if (existingCrane) {
+      res.json({ 
+        exists: true, 
+        crane: {
+          unitNumber: existingCrane["Unit #"],
+          makeModel: existingCrane["Make and Model"],
+          serial: existingCrane["Serial #"],
+          year: existingCrane["Year"]
+        }
+      });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (err) {
+    console.error("Error checking unit number:", err);
+    res.status(500).json({ error: "Error checking unit number" });
   }
 });
 
