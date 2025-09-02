@@ -212,20 +212,27 @@ export default function CraneTable({ cranes, filter, onEdit, onRefresh, onDelete
                 }
                 onDelete(craneId);
               }}>🗑️ Delete</button>
-              <button className="action-btn email-btn" onClick={() => {
-                console.log("Email clicked for crane:", crane);
-                console.log("Crane keys:", Object.keys(crane));
-                console.log("Crane _id:", crane._id);
-                console.log("Crane id:", crane.id);
-                
-                // Try different ID field names
-                const craneId = crane._id || crane.id || crane.ID;
-                if (!craneId) {
-                  alert("Error: Crane ID not found. Available fields: " + Object.keys(crane).join(', '));
-                  return;
-                }
-                onEmailAlert(craneId, crane["Expiration"]);
-              }}>📧 Email</button>
+              <button 
+                className={`action-btn email-btn ${crane.alertEmail ? 'has-email' : 'no-email'}`}
+                onClick={() => {
+                  console.log("🔍 Email clicked for crane:", crane);
+                  console.log("🔍 Crane keys:", Object.keys(crane));
+                  console.log("🔍 Crane _id:", crane._id);
+                  console.log("🔍 Crane id:", crane.id);
+                  console.log("🔍 Crane alertEmail:", crane.alertEmail);
+                  
+                  // Try different ID field names
+                  const craneId = crane._id || crane.id || crane.ID;
+                  if (!craneId) {
+                    alert("Error: Crane ID not found. Available fields: " + Object.keys(crane).join(', '));
+                    return;
+                  }
+                  onEmailAlert(craneId, crane["Expiration"]);
+                }}
+                title={crane.alertEmail ? `Email configured: ${crane.alertEmail}` : "No email configured"}
+              >
+                {crane.alertEmail ? "📧 Email" : "📧 Add Email"}
+              </button>
             </td>
           </tr>
         );

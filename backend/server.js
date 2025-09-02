@@ -74,7 +74,17 @@ process.on('SIGINT', async () => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  
+  // Start auto-email service after server starts
+  try {
+    const { startAutoEmailService } = require('./services/autoEmailService');
+    startAutoEmailService();
+  } catch (error) {
+    console.error('❌ Failed to start auto-email service:', error);
+  }
+});
 
 /* ------------------ AUTO EMAIL ALERTS ------------------ */
 // Email transporter with enhanced Gmail configuration
@@ -208,70 +218,6 @@ Crane Management Team
   }
 };
 
-// Run every day at 8 AM
-cron.schedule("0 8 * * *", async () => {
-  console.log("Running daily crane expiration check...");
-
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to start of day
-    const cranes = await Crane.find();
-
-    for (const crane of cranes) {
-      if (!crane["Expiration"]) continue;
-
-      // Convert Excel date to proper date
-      let expirationDate;
-      try {
-        if (typeof crane["Expiration"] === 'number') {
-          // Excel serial number
-          expirationDate = new Date((crane["Expiration"] - 25569) * 86400 * 1000);
-        } else if (typeof crane["Expiration"] === 'string') {
-          if (/^\d{5,}$/.test(crane["Expiration"])) {
-            // String Excel serial number
-            expirationDate = new Date((parseInt(crane["Expiration"]) - 25569) * 86400 * 1000);
-          } else if (crane["Expiration"].includes('/')) {
-            // DD/MM/YYYY format
-            const parts = crane["Expiration"].split('/');
-            if (parts.length === 3) {
-              expirationDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-            } else {
-              expirationDate = new Date(crane["Expiration"]);
-            }
-          } else {
-            expirationDate = new Date(crane["Expiration"]);
-          }
-        } else {
-          expirationDate = new Date(crane["Expiration"]);
-        }
-
-        if (!expirationDate || isNaN(expirationDate.getTime())) {
-          console.log(`Invalid expiration date for crane ${crane["Unit #"]}: ${crane["Expiration"]}`);
-          continue;
-        }
-
-        expirationDate.setHours(0, 0, 0, 0); // Reset to start of day
-        const diffDays = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-        console.log(`Crane ${crane["Unit #"]}: ${diffDays} days until expiration`);
-
-        // Send email if 4 days before expiration
-        if (diffDays === 4) {
-          const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-          await sendCraneEmailAlert(crane, adminEmail, 'near-expire');
-        }
-        
-        // Send email if expired
-        if (diffDays < 0) {
-          const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-          await sendCraneEmailAlert(crane, adminEmail, 'expired');
-        }
-      } catch (error) {
-        console.error(`Error processing crane ${crane["Unit #"]}:`, error);
-      }
-    }
-  } catch (err) {
-    console.error("Auto email error:", err);
-  }
-});
-/* -------------------------------------------------------- */
+// Auto-email service is now handled by the dedicated service
+// The cron schedules are managed in autoEmailService.js
+console.log("✅ Auto-email service initialized from dedicated service");

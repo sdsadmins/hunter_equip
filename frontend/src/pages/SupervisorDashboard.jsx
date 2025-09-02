@@ -4,6 +4,7 @@ import axios from "axios";
 import CraneTable from "../components/CraneTable";
 import { useNavigate } from "react-router-dom";
 import ExcelUpload from "../components/ExcelUpload";
+import EmailManagementModal from "../components/EmailManagementModal";
 
 import config from "../config";
 import "./SupervisorDashboard.css";
@@ -12,6 +13,8 @@ export default function SupervisorDashboard() {
   const [cranes, setCranes] = useState([]);
   const [filterValue, setFilterValue] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedCrane, setSelectedCrane] = useState(null);
   const [alertSummary, setAlertSummary] = useState({ expired: 0, expiring: 0, ok: 0 });
   const [backendConnected, setBackendConnected] = useState(false);
   const navigate = useNavigate();
@@ -268,83 +271,101 @@ export default function SupervisorDashboard() {
   };
 
 
-const handleEmailAlert = async (id, expiration) => {
-  const token = localStorage.getItem("token");
-  
-        // Email alert request initiated
-  
-  if (!token) {
-    alert("You are not logged in. Please log in again.");
-    navigate("/login");
-    return;
-  }
-
-  // Check expiration days
-  let diffDays = 0;
-  try {
-    const today = new Date();
-    const expDate = new Date(expiration);
-    diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-  } catch (error) {
-    alert("Invalid date format. Cannot calculate expiration days.");
-    return;
-  }
-
-  if (diffDays > 4) {
-    alert("Email alerts can only be sent within 4 days of expiration.");
-    return;
-  }
-
-  let recipientEmail = prompt("Enter recipient email address:");
-  if (!recipientEmail) {
-    alert("No email entered. Cancelled.");
-    return;
-  }
-
-  try {
-    // Try local backend first
-    let response;
-    try {
-              response = await axios.post(
-          `${config.API_URL}/api/cranes/${id}/send-alert`,
-        { recipientEmail },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          timeout: 5000
-        }
-      );
-    } catch (localError) {
-      // If local fails, try remote
-      console.log("Local backend failed, trying remote...");
-              response = await axios.post(
-          `${config.FALLBACK_API_URL}/api/cranes/${id}/send-alert`,
-        { recipientEmail },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          timeout: 5000
-        }
-      );
-    }
-    console.log("Email response:", response.data);
-    alert(`Email sent successfully to ${recipientEmail}`);
-  } catch (err) {
-    console.error("Error sending email:", err.response?.data || err);
-    console.error("Error status:", err.response?.status);
+  const handleEmailAlert = async (id, expiration) => {
+    console.log("🔍 Email alert clicked for ID:", id);
+    console.log("🔍 Available cranes:", cranes.map(c => ({ id: c._id, unit: c["Unit #"] })));
     
-    if (err.response?.status === 401) {
-      alert("Unauthorized. Please log in again.");
-      navigate("/login");
-    } else if (err.response?.status === 404) {
-      alert("Crane not found. It may have been deleted.");
-    } else {
-      alert(`Failed to send email: ${err.response?.data?.error || err.message}`);
+    // Find the crane by ID
+    const crane = cranes.find(c => c._id === id || c.id === id);
+    if (!crane) {
+      console.error("❌ Crane not found for ID:", id);
+      alert("Crane not found");
+      return;
     }
-  }
-};
+    
+    console.log("✅ Found crane:", crane);
+    console.log("🔍 Opening email modal for:", crane["Unit #"]);
+    
+    // Open email management modal
+    setSelectedCrane(crane);
+    setEmailModalOpen(true);
+  };
+
+  const handleEmailUpdated = (updatedCrane) => {
+    console.log("🔍 Updating crane email in local state:", updatedCrane);
+    console.log("🔍 Current cranes state:", cranes.map(c => ({ id: c._id, unit: c["Unit #"], email: c.alertEmail })));
+    
+    // Find the specific crane that was updated
+    const targetCraneId = updatedCrane.id || updatedCrane._id;
+    console.log("🔍 Target crane ID to update:", targetCraneId);
+    
+    // Update the crane in the local state
+    setCranes(prevCranes => {
+      const updatedCranes = prevCranes.map(c => {
+        // Check if this is the crane we need to update
+        if (c._id === targetCraneId || c.id === targetCraneId) {
+          console.log("✅ Updating crane:", c["Unit #"], "with email:", updatedCrane.alertEmail);
+          return { ...c, alertEmail: updatedCrane.alertEmail };
+        }
+        return c;
+      });
+      
+      console.log("🔍 Updated cranes state:", updatedCranes.map(c => ({ id: c._id, unit: c["Unit #"], email: c.alertEmail })));
+      return updatedCranes;
+    });
+    
+    // Also update the selected crane if it's the same one
+    if (selectedCrane && (selectedCrane._id === targetCraneId || selectedCrane.id === targetCraneId)) {
+      setSelectedCrane(prev => ({ ...prev, alertEmail: updatedCrane.alertEmail }));
+    }
+    
+    // Don't refresh all cranes - just keep the local state updated
+    console.log("✅ Email updated successfully for crane:", updatedCrane.unitNumber || updatedCrane["Unit #"]);
+    console.log("✅ Local state updated - no need to refresh from database");
+  };
+
+  const handleTriggerAutoEmail = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("❌ You are not logged in. Please login again.");
+        navigate("/login");
+        return;
+      }
+      
+      console.log("🔔 Triggering auto-email service...");
+      
+      // Try local backend first
+      let response;
+      try {
+        response = await axios.post(
+          `${config.API_URL}/api/cranes/trigger-auto-email`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      } catch (localError) {
+        // If local fails, try remote
+        console.log("Local backend failed, trying remote...");
+        response = await axios.post(
+          `${config.FALLBACK_API_URL}/api/cranes/trigger-auto-email`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        );
+      }
+      
+      const result = response.data.result;
+      if (result && result.success) {
+        alert(`✅ Auto-email service completed successfully!\n\n📊 Results:\n• Total cranes processed: ${result.totalProcessed}\n• Emails sent: ${result.alertsSent}\n• Errors: ${result.errors}\n• Timestamp: ${new Date(result.timestamp).toLocaleString()}\n\nCheck your email inbox for alerts!`);
+      } else {
+        alert(`⚠️ Auto-email service completed with issues!\n\n📊 Results:\n• Total cranes processed: ${result?.totalProcessed || 0}\n• Emails sent: ${result?.alertsSent || 0}\n• Errors: ${result?.errors || 1}\n• Error: ${result?.error || 'Unknown error'}\n\nCheck the backend console for detailed logs.`);
+      }
+      console.log("✅ Auto-email response:", response.data);
+      
+    } catch (error) {
+      console.error("❌ Error triggering auto-email service:", error);
+      alert(`❌ Failed to trigger auto-email service: ${error.response?.data?.error || error.message}`);
+    }
+  };
 
 
 
@@ -811,6 +832,13 @@ const handleEmailAlert = async (id, expiration) => {
     📄 Print All Cranes
   </button>
 
+            <button 
+              className="btn btn-warning" 
+              onClick={handleTriggerAutoEmail}
+              title="Manually trigger auto-email service for testing"
+            >
+              🔔 Trigger Auto-Email
+            </button>
             <button className="btn btn-danger" onClick={handleLogout}>
               🚪 Logout
             </button>
@@ -884,6 +912,18 @@ const handleEmailAlert = async (id, expiration) => {
         {/* Modal removed - editing now opens in new tab */}
       </div>
     </div>
+
+    {/* Email Management Modal */}
+    {emailModalOpen && selectedCrane && (
+      <EmailManagementModal
+        crane={selectedCrane}
+        onClose={() => {
+          setEmailModalOpen(false);
+          setSelectedCrane(null);
+        }}
+        onEmailUpdated={handleEmailUpdated}
+      />
+    )}
     </div>
   );
 }

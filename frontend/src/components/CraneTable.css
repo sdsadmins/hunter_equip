@@ -84,6 +84,24 @@
   box-shadow: 0 3px 8px rgba(168, 237, 234, 0.3);
 }
 
+.email-btn.has-email {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+}
+
+.email-btn.has-email:hover {
+  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+}
+
+.email-btn.no-email {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+}
+
+.email-btn.no-email:hover {
+  box-shadow: 0 3px 8px rgba(255, 152, 0, 0.3);
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .crane-table {

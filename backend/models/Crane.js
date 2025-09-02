@@ -15,7 +15,8 @@ const craneSchema = new mongoose.Schema(
     "Serial #": String,
     "Expiration": String, // Keep as string so it matches Excel exactly
     "Currently In Use": String,
-    active: Boolean
+    active: Boolean,
+    alertEmail: String // Email for sending alerts to specific crane operators
   },
   { strict: false } // Allows extra Excel columns to still be stored
 );

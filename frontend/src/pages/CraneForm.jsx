@@ -10,7 +10,8 @@ export default function CraneForm({ crane, onSave, onClose }) {
     "Serial #": "",
     "Expiration": "",
     "Currently In Use": "O",
-    "active": true
+    "active": true,
+    alertEmail: ""
   });
 
   // Helper function to convert Excel date to YYYY-MM-DD format for input
@@ -78,7 +79,8 @@ export default function CraneForm({ crane, onSave, onClose }) {
         "Serial #": crane["Serial #"] || "",
         "Expiration": convertExcelDateToInputFormat(crane["Expiration"]),
         "Currently In Use": crane["Currently In Use"] || "O",
-        "active": crane.active !== undefined ? Boolean(crane.active) : true
+        "active": crane.active !== undefined ? Boolean(crane.active) : true,
+        alertEmail: crane.alertEmail || ""
       };
       
       setForm(editForm);
@@ -92,7 +94,8 @@ export default function CraneForm({ crane, onSave, onClose }) {
         "Serial #": "",
         "Expiration": "",
         "Currently In Use": "O",
-        "active": true
+        "active": true,
+        alertEmail: ""
       });
     }
   }, [crane]);
@@ -231,6 +234,26 @@ export default function CraneForm({ crane, onSave, onClose }) {
               <option value="O">O (Active)</option>
               <option value="X">X (Inactive)</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="alertEmail">Alert Email</label>
+            <input
+              id="alertEmail"
+              name="alertEmail"
+              type="email"
+              placeholder="e.g., operator@company.com"
+              value={form.alertEmail}
+              onChange={handleChange}
+              style={{ 
+                border: '1px solid #ccc',
+                backgroundColor: '#f8f9fa',
+                color: '#495057'
+              }}
+            />
+            <small style={{ color: '#666', fontSize: '0.8em' }}>
+              Optional: Email address for sending expiration alerts
+            </small>
           </div>
 
           <div className="form-group checkbox-group">

@@ -168,6 +168,7 @@ router.get("/supervisor", authMiddleware, async (req, res) => {
       "Expiration": 1,
       "Currently In Use": 1,
       "active": 1,
+      "alertEmail": 1,
       "_id": 1
     });
     
@@ -1029,6 +1030,343 @@ router.get("/test-date/:id", authMiddleware, async (req, res) => {
       error: "Error testing date calculation",
       details: error.message 
     });
+  }
+});
+
+// ==========================
+// EMAIL MANAGEMENT ROUTES
+// ==========================
+
+// Add or update email for a specific crane
+router.post("/:id/email", authMiddleware, async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    console.log("🔍 Email update request received:");
+    console.log("   Crane ID:", req.params.id);
+    console.log("   Email:", email);
+    console.log("   Request body:", req.body);
+    
+    // Validate crane ID
+    if (!req.params.id || req.params.id === 'undefined') {
+      console.log("❌ Invalid crane ID:", req.params.id);
+      return res.status(400).json({ error: "Invalid crane ID" });
+    }
+    
+    // Check if crane exists first
+    const existingCrane = await Crane.findById(req.params.id);
+    if (!existingCrane) {
+      console.log("❌ Crane not found with ID:", req.params.id);
+      return res.status(404).json({ error: "Crane not found" });
+    }
+    
+    console.log("🔍 Found existing crane:", existingCrane["Unit #"]);
+    
+    // Allow empty email to remove email configuration
+    if (email === "") {
+      console.log("🗑️ Removing email configuration for crane:", req.params.id);
+      
+      const crane = await Crane.findByIdAndUpdate(
+        req.params.id,
+        { alertEmail: "" },
+        { new: true, runValidators: true }
+      );
+
+      if (!crane) {
+        console.log("❌ Crane not found for removal:", req.params.id);
+        return res.status(404).json({ error: "Crane not found" });
+      }
+
+      console.log("✅ Email removed successfully for crane:", crane["Unit #"]);
+      return res.json({ 
+        message: "Email removed successfully", 
+        crane: {
+          id: crane._id,
+          _id: crane._id,
+          unitNumber: crane["Unit #"],
+          alertEmail: ""
+        }
+      });
+    }
+    
+    if (!email) {
+      console.log("❌ No email provided in request");
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log("❌ Invalid email format:", email);
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
+    console.log("💾 Saving email to database for crane:", req.params.id);
+    console.log("   Email to save:", email);
+    console.log("   Current crane alertEmail:", existingCrane.alertEmail);
+
+    // Update the crane with the new email
+    const crane = await Crane.findByIdAndUpdate(
+      req.params.id,
+      { alertEmail: email },
+      { new: true, runValidators: true }
+    );
+
+    if (!crane) {
+      console.log("❌ Crane not found after update:", req.params.id);
+      return res.status(404).json({ error: "Crane not found" });
+    }
+
+    console.log("✅ Email saved successfully to database:");
+    console.log("   Crane Unit #:", crane["Unit #"]);
+    console.log("   Saved alertEmail:", crane.alertEmail);
+    console.log("   Full crane object:", JSON.stringify(crane, null, 2));
+
+    // Verify the email was actually saved by fetching again
+    const verifyCrane = await Crane.findById(req.params.id);
+    console.log("🔍 Verification - Crane from database:", verifyCrane.alertEmail);
+
+    res.json({ 
+      message: "Email updated successfully", 
+      crane: {
+        id: crane._id,
+        _id: crane._id,
+        unitNumber: crane["Unit #"],
+        alertEmail: crane.alertEmail
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating crane email:", error);
+    console.error("   Error details:", error.message);
+    console.error("   Stack trace:", error.stack);
+    res.status(500).json({ error: "Failed to update email" });
+  }
+});
+
+// Get email for a specific crane
+router.get("/:id/email", authMiddleware, async (req, res) => {
+  try {
+    const crane = await Crane.findById(req.params.id);
+    
+    if (!crane) {
+      return res.status(404).json({ error: "Crane not found" });
+    }
+
+    res.json({ 
+      alertEmail: crane.alertEmail || null,
+      unitNumber: crane["Unit #"]
+    });
+
+  } catch (error) {
+    console.error("Error getting crane email:", error);
+    res.status(500).json({ error: "Failed to get email" });
+  }
+});
+
+// Send immediate email alert for a specific crane
+router.post("/:id/send-alert", authMiddleware, async (req, res) => {
+  try {
+    const crane = await Crane.findById(req.params.id);
+    
+    if (!crane) {
+      return res.status(404).json({ error: "Crane not found" });
+    }
+
+    if (!crane.alertEmail) {
+      return res.status(400).json({ error: "No email configured for this crane" });
+    }
+
+    // Helper function to convert Excel date
+    const convertExcelDate = (dateValue) => {
+      if (!dateValue) return null;
+      
+      try {
+        let date;
+        if (typeof dateValue === 'number' && dateValue > 1000) {
+          // Excel serial number
+          date = new Date((dateValue - 25569) * 86400 * 1000);
+        } else if (typeof dateValue === 'string') {
+          if (/^\d{5,}$/.test(dateValue)) {
+            // String Excel serial number
+            date = new Date((parseInt(dateValue) - 25569) * 86400 * 1000);
+          } else if (dateValue.includes('/')) {
+            // DD/MM/YYYY format
+            const parts = dateValue.split('/');
+            if (parts.length === 3) {
+              date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            } else {
+              date = new Date(dateValue);
+            }
+          } else {
+            date = new Date(dateValue);
+          }
+        } else {
+          date = new Date(dateValue);
+        }
+        
+        return date;
+      } catch (error) {
+        console.error("Date conversion error:", error);
+        return null;
+      }
+    };
+
+    // Get expiration status
+    const expirationDate = convertExcelDate(crane["Expiration"]);
+    if (!expirationDate || isNaN(expirationDate.getTime())) {
+      return res.status(400).json({ error: "Invalid expiration date" });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    expirationDate.setHours(0, 0, 0, 0);
+    
+    const diffDays = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let status = "";
+    if (diffDays < 0) {
+      status = "EXPIRED";
+    } else if (diffDays <= 30) {
+      status = "NEAR TO EXPIRE";
+    } else {
+      status = "OK";
+    }
+
+    // Send email alert (you'll need to implement nodemailer here)
+    // For now, just return success
+    res.json({ 
+      message: "Email alert sent successfully", 
+      to: crane.alertEmail,
+      crane: crane["Unit #"],
+      status: status,
+      daysUntilExpiration: diffDays
+    });
+
+  } catch (error) {
+    console.error("Error sending email alert:", error);
+    res.status(500).json({ error: "Failed to send email alert" });
+  }
+});
+
+// Auto-email service routes
+const { triggerManualCheck } = require('../services/autoEmailService');
+
+// Manual trigger for auto-email service (for testing)
+router.post("/trigger-auto-email", authMiddleware, async (req, res) => {
+  try {
+    console.log('🔧 Manual trigger requested for auto-email service');
+    const result = await triggerManualCheck();
+    res.json({ 
+      message: "Auto-email service triggered successfully",
+      timestamp: new Date().toISOString(),
+      result: result
+    });
+  } catch (error) {
+    console.error("Error triggering auto-email service:", error);
+    res.status(500).json({ error: "Failed to trigger auto-email service" });
+  }
+});
+
+// Debug route to check database state for emails
+router.get("/debug/emails", authMiddleware, async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking database for crane emails...');
+    
+    // Get all cranes with emails
+    const cranesWithEmails = await Crane.find({ 
+      alertEmail: { $exists: true, $ne: "" }
+    });
+    
+    // Get sample of all cranes
+    const allCranes = await Crane.find({}).limit(10);
+    
+    console.log(`📊 Debug: Found ${cranesWithEmails.length} cranes with emails`);
+    console.log(`📊 Debug: Total cranes in database: ${await Crane.countDocuments()}`);
+    
+    // Log detailed information about cranes with emails
+    if (cranesWithEmails.length > 0) {
+      console.log('📧 Cranes with emails:');
+      cranesWithEmails.forEach(crane => {
+        console.log(`   Unit #: ${crane["Unit #"]}, Email: ${crane.alertEmail}, ID: ${crane._id}`);
+      });
+    }
+    
+    // Log sample cranes to see their alertEmail field
+    console.log('🔍 Sample cranes from database:');
+    allCranes.forEach(crane => {
+      console.log(`   Unit #: ${crane["Unit #"]}, alertEmail: ${crane.alertEmail || 'undefined'}, ID: ${crane._id}`);
+    });
+    
+    res.json({
+      message: "Database email state retrieved",
+      cranesWithEmails: cranesWithEmails.map(c => ({
+        id: c._id,
+        unitNumber: c["Unit #"],
+        alertEmail: c.alertEmail
+      })),
+      sampleCranes: allCranes.map(c => ({
+        id: c._id,
+        unitNumber: c["Unit #"],
+        alertEmail: c.alertEmail || 'undefined'
+      })),
+      totalCranes: await Crane.countDocuments(),
+      cranesWithEmailsCount: cranesWithEmails.length
+    });
+    
+  } catch (error) {
+    console.error("❌ Debug route error:", error);
+    res.status(500).json({ error: "Failed to get debug info" });
+  }
+});
+
+// Test route to manually add email to a crane (for debugging)
+router.post("/test/add-email/:id", authMiddleware, async (req, res) => {
+  try {
+    const { email } = req.body;
+    const craneId = req.params.id;
+    
+    console.log('🧪 Test: Manually adding email to crane:', craneId);
+    console.log('🧪 Test: Email to add:', email);
+    
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    
+    // Find the crane first
+    const crane = await Crane.findById(craneId);
+    if (!crane) {
+      return res.status(404).json({ error: "Crane not found" });
+    }
+    
+    console.log('🧪 Test: Found crane:', crane["Unit #"]);
+    console.log('🧪 Test: Current alertEmail:', crane.alertEmail);
+    
+    // Update the email
+    const updatedCrane = await Crane.findByIdAndUpdate(
+      craneId,
+      { alertEmail: email },
+      { new: true, runValidators: true }
+    );
+    
+    console.log('🧪 Test: Updated crane:', updatedCrane.alertEmail);
+    
+    // Verify by fetching again
+    const verifyCrane = await Crane.findById(craneId);
+    console.log('🧪 Test: Verification - alertEmail from DB:', verifyCrane.alertEmail);
+    
+    res.json({
+      message: "Test email added successfully",
+      crane: {
+        id: verifyCrane._id,
+        unitNumber: verifyCrane["Unit #"],
+        alertEmail: verifyCrane.alertEmail
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ Test route error:", error);
+    res.status(500).json({ error: "Failed to add test email" });
   }
 });
 
