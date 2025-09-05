@@ -16,6 +16,10 @@ export default function SupervisorDashboard() {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedCrane, setSelectedCrane] = useState(null);
   const [alertSummary, setAlertSummary] = useState({ expired: 0, expiring: 0, ok: 0 });
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [filterEnabled, setFilterEnabled] = useState(false);
+  const [filterType, setFilterType] = useState("month");
+  const [toggleFilterValue, setToggleFilterValue] = useState("");
   const [backendConnected, setBackendConnected] = useState(false);
   const navigate = useNavigate();
 
@@ -379,6 +383,19 @@ export default function SupervisorDashboard() {
     // This prevents the dropdown from closing when clicking the email icon
   };
 
+  // Handle alert summary item clicks for filtering
+  const handleAlertClick = (status) => {
+    if (status === "all") {
+      setStatusFilter("all");
+    } else if (status === "expired") {
+      setStatusFilter("Expired");
+    } else if (status === "expiring") {
+      setStatusFilter("Near to Expire");
+    } else if (status === "ok") {
+      setStatusFilter("OK");
+    }
+  };
+
   const handleSendEmailAlert = async () => {
     // Show crane selection dialog
     const craneOptions = cranes.map(crane => `${crane["Unit #"]} - ${crane["Make and Model"]}`).join('\n');
@@ -666,6 +683,42 @@ export default function SupervisorDashboard() {
       isDuplicate: duplicateUnits.includes(crane["Unit #"]) // Mark duplicate Unit #s
     }))
     .filter((crane) => {
+      // Status filtering
+      if (statusFilter !== "all" && crane.status !== statusFilter) {
+        return false;
+      }
+      
+      // Toggle filter filtering
+      if (filterEnabled && toggleFilterValue) {
+        try {
+          const craneExpiration = convertExcelDate(crane.Expiration);
+          if (!craneExpiration) return false;
+          
+          switch (filterType) {
+            case "month":
+              if (toggleFilterValue.includes('/')) {
+                const [month, year] = toggleFilterValue.split('/');
+                if (month && year) {
+                  return craneExpiration.includes(`/${month}/${year}`);
+                }
+              }
+              return false;
+              
+            case "year":
+              return craneExpiration.includes(`/${toggleFilterValue}`);
+              
+            case "date":
+              return craneExpiration === toggleFilterValue;
+              
+            default:
+              return true;
+          }
+        } catch (error) {
+          return false;
+        }
+      }
+      
+      // Search filtering
       if (!filterValue.trim()) return true;
       
       const search = filterValue.toLowerCase().trim();
@@ -686,12 +739,43 @@ export default function SupervisorDashboard() {
       if (search.length >= 3 && unitNumber.includes(search)) return true;
       
       // 4. Other field matches
-      return (
+      const otherFieldMatch = (
         makeModel.includes(search) ||
         serialNumber.includes(search) ||
         year.includes(search) ||
         ton.includes(search)
       );
+      
+      if (otherFieldMatch) return true;
+      
+      // 5. Date searching - check if search term looks like a date
+      if (search.includes('/') && search.length >= 8) {
+        try {
+          const searchDate = search.trim();
+          const craneExpiration = convertExcelDate(crane.Expiration);
+          
+          // Check if the search date matches the crane's expiration date
+          if (craneExpiration && craneExpiration.includes(searchDate)) {
+            return true;
+          }
+          
+          // Also check if the search date is contained within the expiration date
+          if (craneExpiration && craneExpiration.includes(searchDate.substring(0, 5))) {
+            return true;
+          }
+          
+          // Check for year-only search (e.g., "2025")
+          if (search.length === 4 && /^\d{4}$/.test(search)) {
+            if (craneExpiration && craneExpiration.includes(search)) {
+              return true;
+            }
+          }
+        } catch (error) {
+          // If date parsing fails, continue with other search criteria
+        }
+      }
+      
+      return false;
     })
     .sort((a, b) => {
       // First sort by active status (active cranes first)
@@ -701,7 +785,24 @@ export default function SupervisorDashboard() {
       
       // Then sort by status order
       const order = { "OK": 1, "Near to Expire": 2, "Expired": 3, "Inactive": 4 };
-      return order[a.status] - order[b.status];
+      if (order[a.status] !== order[b.status]) {
+        return order[a.status] - order[b.status];
+      }
+      
+      // If same status, sort by expiration date (earliest first - ascending)
+      try {
+        const partsA = a.Expiration ? convertExcelDate(a.Expiration).split('/') : [];
+        const partsB = b.Expiration ? convertExcelDate(b.Expiration).split('/') : [];
+        if (partsA.length === 3 && partsB.length === 3) {
+          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+          return dateA - dateB;
+        }
+      } catch (error) {
+        // If date parsing fails, keep original order
+      }
+      
+      return 0;
     });
 
   return (
@@ -719,19 +820,19 @@ export default function SupervisorDashboard() {
                 <div className="alert-count">{alertSummary.expired + alertSummary.expiring + alertSummary.ok}</div>
                 <div className="alert-dropdown">
                   <div className="alert-summary">
-                    <div className="summary-item">
+                    <div className="summary-item clickable" onClick={() => handleAlertClick("expired")} style={{cursor: 'pointer', transition: 'background-color 0.2s'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
                       <span className="summary-icon">🚨</span>
                       <span className="summary-text">{alertSummary.expired} Expired</span>
                     </div>
-                    <div className="summary-item">
+                    <div className="summary-item clickable" onClick={() => handleAlertClick("expiring")} style={{cursor: 'pointer', transition: 'background-color 0.2s'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
                       <span className="summary-icon">⚠️</span>
                       <span className="summary-text">{alertSummary.expiring} Expiring This Month</span>
                     </div>
-                    <div className="summary-item">
+                    <div className="summary-item clickable" onClick={() => handleAlertClick("ok")} style={{cursor: 'pointer', transition: 'background-color 0.2s'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
                       <span className="summary-icon">✅</span>
                       <span className="summary-text">{alertSummary.ok} OK</span>
                     </div>
-                    <div className="summary-footer">
+                    <div className="summary-footer clickable" onClick={() => handleAlertClick("all")} style={{cursor: 'pointer', transition: 'background-color 0.2s'}} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
                       Total Cranes: {cranes.length}
                     </div>
                   </div>
@@ -756,6 +857,10 @@ export default function SupervisorDashboard() {
                   </div>
                 </div>
               </div>
+              
+              <button className="header-logout-btn" onClick={handleLogout}>
+                🚪 Logout
+              </button>
             </div>
           </div>
         </div>
@@ -774,9 +879,83 @@ export default function SupervisorDashboard() {
             )}
           </div>
           
+          {/* Filter Options (only show when toggle is ON) */}
+          {filterEnabled && (
+            <div className="filter-options" style={{ marginBottom: "15px", textAlign: "center" }}>
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                style={{ padding: "8px", marginRight: "10px", borderRadius: "4px" }}
+              >
+                <option value="month">By Month</option>
+                <option value="year">By Year</option>
+                <option value="date">By Date</option>
+              </select>
+              
+              {filterType === "month" && (
+                <div style={{ display: "inline-block" }}>
+                  <select 
+                    value={toggleFilterValue.split('/')[0] || ""} 
+                    onChange={(e) => setToggleFilterValue(`${e.target.value}/${toggleFilterValue.split('/')[1] || ""}`)}
+                    style={{ padding: "8px", marginRight: "5px", borderRadius: "4px" }}
+                  >
+                    <option value="">Month</option>
+                    <option value="01">Jan</option>
+                    <option value="02">Feb</option>
+                    <option value="03">Mar</option>
+                    <option value="04">Apr</option>
+                    <option value="05">May</option>
+                    <option value="06">Jun</option>
+                    <option value="07">Jul</option>
+                    <option value="08">Aug</option>
+                    <option value="09">Sep</option>
+                    <option value="10">Oct</option>
+                    <option value="11">Nov</option>
+                    <option value="12">Dec</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Year"
+                    value={toggleFilterValue.split('/')[1] || ""}
+                    onChange={(e) => setToggleFilterValue(`${toggleFilterValue.split('/')[0] || ""}/${e.target.value}`)}
+                    style={{ padding: "8px", width: "80px", borderRadius: "4px" }}
+                  />
+                </div>
+              )}
+              
+              {filterType === "year" && (
+                <input
+                  type="number"
+                  placeholder="Enter Year (e.g., 2025)"
+                  value={toggleFilterValue}
+                  onChange={(e) => setToggleFilterValue(e.target.value)}
+                  style={{ padding: "8px", width: "150px", borderRadius: "4px" }}
+                />
+              )}
+              
+              {filterType === "date" && (
+                <input
+                  type="text"
+                  placeholder="Enter Date (DD/MM/YYYY)"
+                  value={toggleFilterValue}
+                  onChange={(e) => setToggleFilterValue(e.target.value)}
+                  style={{ padding: "8px", width: "150px", borderRadius: "4px" }}
+                />
+              )}
+            </div>
+          )}
+          
           <div className="search-controls">
             <div className="search-container">
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button 
+                  className={`filter-toggle-btn ${filterEnabled ? 'active' : 'inactive'}`}
+                  onClick={() => setFilterEnabled(!filterEnabled)}
+                  style={{ marginRight: '10px' }}
+                >
+                  <span className="toggle-icon">{filterEnabled ? '🔍' : '⚪'}</span>
+                  <span className="toggle-text">{filterEnabled ? 'Filter ON' : 'Filter OFF'}</span>
+                </button>
                 <input
                   type="text"
                   placeholder="🔍 Search: Unit #, Model, Serial, Year..."
@@ -803,15 +982,18 @@ export default function SupervisorDashboard() {
                   </button>
                 )}
               </div>
-              {filterValue && (
+              {(filterValue || (filterEnabled && toggleFilterValue)) && (
                 <div className="search-help">
                   <small>
                     Showing {filteredCranes.length} of {cranes.length} cranes
-                    {filterValue.length < 3 && filteredCranes.length > 10 && (
+                    {filterValue && filterValue.length < 3 && filteredCranes.length > 10 && (
                       <span style={{color: '#ff9800'}}> • Tip: Type 3+ characters for better results</span>
                     )}
-                    {filterValue.length >= 3 && (
+                    {filterValue && filterValue.length >= 3 && (
                       <span style={{color: '#4caf50'}}> • Search: "{filterValue}"</span>
+                    )}
+                    {filterEnabled && toggleFilterValue && (
+                      <span style={{color: '#ffaa00'}}> • Filter: {filterType} - {toggleFilterValue}</span>
                     )}
                   </small>
                 </div>
@@ -838,9 +1020,6 @@ export default function SupervisorDashboard() {
               title="Manually trigger auto-email service for testing"
             >
               🔔 Trigger Auto-Email
-            </button>
-            <button className="btn btn-danger" onClick={handleLogout}>
-              🚪 Logout
             </button>
           </div>
         </div>

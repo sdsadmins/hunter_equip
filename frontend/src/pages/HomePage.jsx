@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css"; // ✅ Import CSS
@@ -9,6 +9,11 @@ export default function HomePage() {
   const [showCranes, setShowCranes] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const navigate = useNavigate();
+
+  // Load notifications automatically when component mounts
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
   // Helper function to convert Excel date serial numbers
   const convertExcelDate = (dateValue) => {
@@ -93,7 +98,7 @@ export default function HomePage() {
         if (partsA.length === 3 && partsB.length === 3) {
           const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
           const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
-          return dateA - dateB;
+          return dateB - dateA;
         }
       } catch (error) {
         // If date parsing fails, keep original order
@@ -101,6 +106,39 @@ export default function HomePage() {
       
       return 0;
     });
+  };
+
+  // Function to load notifications automatically
+  const loadNotifications = async () => {
+    try {
+      const res = await axios.get(`${config.API_URL}/api/cranes/public`);
+      
+      // Check for expiring cranes and create web alerts
+      const today = new Date();
+      const newAlerts = [];
+      res.data.forEach((crane) => {
+        try {
+          const expDate = new Date(crane.expiration);
+          const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+          if (diffDays > 0 && diffDays <= 4) {
+            newAlerts.push({
+              id: crane._id || Math.random(),
+              message: `⚠️ Crane ${crane.unit} expires in ${diffDays} day${diffDays > 1 ? 's' : ''}`,
+              type: diffDays <= 1 ? 'critical' : 'warning',
+              unit: crane.unit,
+              expiration: crane.expiration,
+              color: getExpirationStatus(crane.expiration).color
+            });
+          }
+        } catch (error) {
+          console.warn(`Invalid date format for crane ${crane.unit}: ${crane.expiration}`);
+        }
+      });
+      setAlerts(newAlerts);
+    } catch (err) {
+      console.error("Error loading notifications:", err);
+      // Don't show alert for notification loading errors
+    }
   };
 
   const fetchCranes = async () => {
@@ -133,28 +171,8 @@ export default function HomePage() {
       setCranes(sortedCranes);
       setShowCranes(true);
 
-      // Check for expiring cranes and create web alerts
-      const today = new Date();
-      const newAlerts = [];
-      res.data.forEach((crane) => {
-        try {
-          const expDate = new Date(crane.expiration);
-          const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-          if (diffDays > 0 && diffDays <= 4) {
-            newAlerts.push({
-              id: crane._id || Math.random(),
-              message: `⚠️ Crane ${crane.unit} expires in ${diffDays} day${diffDays > 1 ? 's' : ''}`,
-              type: diffDays <= 1 ? 'critical' : 'warning',
-              unit: crane.unit,
-              expiration: crane.expiration,
-              color: getExpirationStatus(crane.expiration).color
-            });
-          }
-        } catch (error) {
-          console.warn(`Invalid date format for crane ${crane.unit}: ${crane.expiration}`);
-        }
-      });
-      setAlerts(newAlerts);
+      // Update notifications when cranes are fetched
+      await loadNotifications();
     } catch (err) {
       console.error("Error fetching cranes:", err);
       console.error("API URL used:", `${config.API_URL}/api/cranes/public`);
@@ -168,6 +186,34 @@ export default function HomePage() {
       }
     }
   };
+
+
+
+  // Sort cranes by expiration status for display
+  const sortedCranes = [...cranes].sort((a, b) => {
+    const statusA = getExpirationStatus(a.expiration);
+    const statusB = getExpirationStatus(b.expiration);
+    
+    // First sort by priority (1 = above month, 2 = within month, 3 = expired)
+    if (statusA.priority !== statusB.priority) {
+      return statusA.priority - statusB.priority;
+    }
+    
+    // If same priority, sort by expiration date (earliest first - ascending)
+    try {
+      const partsA = a.expiration.split('/');
+      const partsB = b.expiration.split('/');
+      if (partsA.length === 3 && partsB.length === 3) {
+        const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+        const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+        return dateA - dateB;
+      }
+    } catch (error) {
+      // If date parsing fails, keep original order
+    }
+    
+    return 0;
+  });
 
   const handleCraneClick = () => {
     navigate("/login");
@@ -236,7 +282,7 @@ export default function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {cranes.map((crane, index) => {
+              {sortedCranes.map((crane, index) => {
                 const expirationStatus = getExpirationStatus(crane.expiration);
                 return (
                   <tr key={index} onClick={handleCraneClick}>

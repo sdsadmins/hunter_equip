@@ -213,8 +213,8 @@ const checkExpirationsAndSendAlerts = async () => {
         expirationDate.setHours(0, 0, 0, 0);
         const diffDays = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Send alerts for expired or expiring soon cranes
-        if (diffDays <= 30) {
+        // Send alerts for ALL expired cranes and expiring soon cranes
+        if (diffDays < 0 || diffDays <= 30) {
           let alertType = '';
           let urgency = '';
           
@@ -278,7 +278,7 @@ const checkExpirationsAndSendAlerts = async () => {
 const startAutoEmailService = () => {
   console.log('🚀 Starting auto-email service...');
   
-  // Run every day at 9:00 AM
+  // Run every day at 9:00 AM UTC only
   cron.schedule('0 9 * * *', () => {
     console.log('⏰ Auto-email service: Daily check triggered');
     checkExpirationsAndSendAlerts();
@@ -287,18 +287,9 @@ const startAutoEmailService = () => {
     timezone: "UTC"
   });
   
-  // Also run every hour for critical alerts (optional)
-  cron.schedule('0 * * * *', () => {
-    console.log('⏰ Auto-email service: Hourly check triggered');
-    checkExpirationsAndSendAlerts();
-  }, {
-    scheduled: true,
-    timezone: "UTC"
-  });
-  
   console.log('✅ Auto-email service: Scheduled tasks created');
-  console.log('   - Daily check: 9:00 AM UTC');
-  console.log('   - Hourly check: Every hour');
+  console.log('   - Daily check: 9:00 AM UTC (once per day only)');
+  console.log('   - Manual trigger available via admin button');
 };
 
 // Manual trigger function (for testing)
