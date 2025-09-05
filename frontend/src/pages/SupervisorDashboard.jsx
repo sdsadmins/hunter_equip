@@ -954,7 +954,7 @@ export default function SupervisorDashboard() {
                   style={{ marginRight: '10px' }}
                 >
                   <span className="toggle-icon">{filterEnabled ? '🔍' : '⚪'}</span>
-                  <span className="toggle-text">{filterEnabled ? 'Filter ON' : 'Filter OFF'}</span>
+                  <span className="toggle-text">{filterEnabled ? 'Sort By' : 'Sort By'}</span>
                 </button>
                 <input
                   type="text"
