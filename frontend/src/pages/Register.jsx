@@ -105,7 +105,7 @@ export default function Register() {
         setMessage("❌ Network error. Please check your connection.");
         setIsDuplicateUser(false);
       } else if (err.response?.status === 409) {
-        setMessage("❌ User already exists with this email address. Please go to login or use a different email.");
+        setMessage("❌ User already exists with this email address. Please go to login or else use a different email for registration.");
         setIsDuplicateUser(true);
       } else if (err.response?.data?.error) {
         setMessage(`❌ ${err.response.data.error}`);

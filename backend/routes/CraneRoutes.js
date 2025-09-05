@@ -313,300 +313,6 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * ==========================
- * Send Email Alert
- * ==========================
- */
-router.post("/:id/send-alert", authMiddleware, async (req, res) => {
-  try {
-    const { recipientEmail } = req.body;
-    const crane = await Crane.findById(req.params.id);
-    if (!crane) return res.status(404).json({ error: "Crane not found" });
-
-    // Calculate days until expiration with proper date handling
-    let diffDays = 0;
-    let expirationStatus = "";
-    try {
-      console.log("Processing crane expiration:", crane["Expiration"], "Type:", typeof crane["Expiration"]);
-      
-      // Enhanced date conversion function
-      const convertExcelDate = (dateValue) => {
-        if (!dateValue) return null;
-        
-        console.log("Converting date value:", dateValue, "Type:", typeof dateValue);
-        
-        // If it's already a Date object
-        if (dateValue instanceof Date) {
-          return dateValue;
-        }
-        
-        // If it's a string
-        if (typeof dateValue === 'string') {
-          // Check if it's a string number that looks like Excel date serial
-          if (/^\d{5,}$/.test(dateValue)) {
-            console.log("Converting Excel serial string:", dateValue);
-            const excelDate = new Date((parseInt(dateValue) - 25569) * 86400 * 1000);
-            console.log("Converted Excel date:", excelDate);
-            return excelDate;
-          }
-          
-          // Check if it's DD/MM/YYYY format
-          if (dateValue.includes('/')) {
-            const parts = dateValue.split('/');
-            if (parts.length === 3) {
-              console.log("Converting DD/MM/YYYY format:", dateValue);
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]) - 1; // Month is 0-indexed
-              const year = parseInt(parts[2]);
-              const date = new Date(year, month, day);
-              console.log("Converted DD/MM/YYYY date:", date);
-              return date;
-            }
-          }
-          
-          // Try parsing as regular date string
-          const parsedDate = new Date(dateValue);
-          if (!isNaN(parsedDate.getTime())) {
-            console.log("Parsed as regular date:", parsedDate);
-            return parsedDate;
-          }
-        }
-        
-        // If it's a number (Excel serial number)
-        if (typeof dateValue === 'number' && dateValue > 1000) {
-          console.log("Converting Excel serial number:", dateValue);
-          const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
-          console.log("Converted Excel number date:", excelDate);
-          return excelDate;
-        }
-        
-        console.log("Could not convert date value:", dateValue);
-        return null;
-      };
-
-      const expirationDate = convertExcelDate(crane["Expiration"]);
-      if (!expirationDate || isNaN(expirationDate.getTime())) {
-        console.error("Invalid expiration date:", crane["Expiration"]);
-        return res.status(400).json({ error: "Invalid expiration date in crane data" });
-      }
-
-      const today = new Date();
-      // Reset time to start of day for accurate calculation
-      today.setHours(0, 0, 0, 0);
-      expirationDate.setHours(0, 0, 0, 0);
-      
-      diffDays = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
-      console.log("Date calculation:", {
-        originalExpiration: crane["Expiration"],
-        expirationDate: expirationDate,
-        today: today,
-        diffDays: diffDays
-      });
-      
-      // Determine status based on current date
-      if (diffDays < 0) {
-        expirationStatus = "EXPIRED";
-      } else if (diffDays <= 30) {
-        expirationStatus = "NEAR TO EXPIRE";
-      } else {
-        expirationStatus = "OK";
-      }
-    } catch (error) {
-      console.error("Date parsing error:", error);
-      return res.status(400).json({ error: "Invalid date format in crane data" });
-    }
-
-    // Get recipient email
-    let emailToSend = recipientEmail;
-    if (!emailToSend) {
-      const user = await User.findById(req.userId);
-      if (user?.email) {
-        emailToSend = user.email;
-      }
-    }
-
-    if (!emailToSend) {
-      return res.status(400).json({ error: "No recipient email provided" });
-    }
-
-    // Create transporter with enhanced Gmail configuration
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      secure: true,
-      port: 465,
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-
-    // Create email content based on current status
-    let subject, text;
-    
-    if (expirationStatus === "EXPIRED") {
-      subject = `🚨 CRANE EXPIRED - ${crane["Unit #"]} - URGENT ACTION REQUIRED`;
-      text = `
-Dear Supervisor,
-
-🚨 URGENT: Your crane has EXPIRED!
-
-CRANE DETAILS:
-• Unit #: ${crane["Unit #"]}
-• Make & Model: ${crane["Make and Model"]}
-• Serial #: ${crane["Serial #"]}
-• Year: ${crane["Year"] || "N/A"}
-• Ton: ${crane["Ton"] || "N/A"}
-• Expiration Date: ${crane["Expiration"]}
-• Current Status: EXPIRED
-
-🚨 CRITICAL: This crane expired ${Math.abs(diffDays)} days ago and should NOT be used.
-
-IMMEDIATE ACTION REQUIRED:
-1. ⛔ STOP using this crane immediately
-2. 📞 Contact our team for assistance
-3. 🔍 Schedule emergency inspection
-4. 📋 Update all documentation
-5. 🚫 Remove from active service
-
-SAFETY CONCERNS:
-• Operating an expired crane is a safety violation
-• Insurance may not cover expired equipment
-• Legal compliance issues may arise
-
-For immediate assistance, contact:
-• Safety Department: [Phone Number]
-• Maintenance Team: [Phone Number]
-• Emergency Hotline: [Phone Number]
-
-This is an automated alert from the Crane Management System.
-Generated on: ${new Date().toLocaleString()}
-
-Best regards,
-Crane Management Team
-      `;
-    } else if (expirationStatus === "NEAR TO EXPIRE") {
-      subject = `⚠️ CRANE EXPIRATION WARNING - ${crane["Unit #"]} - ${diffDays} DAYS REMAINING`;
-      text = `
-Dear Supervisor,
-
-⚠️ WARNING: Your crane is approaching its expiration date!
-
-CRANE DETAILS:
-• Unit #: ${crane["Unit #"]}
-• Make & Model: ${crane["Make and Model"]}
-• Serial #: ${crane["Serial #"]}
-• Year: ${crane["Year"] || "N/A"}
-• Ton: ${crane["Ton"] || "N/A"}
-• Expiration Date: ${crane["Expiration"]}
-• Days Remaining: ${diffDays} days
-
-⚠️ WARNING: This crane will expire in ${diffDays} days.
-
-URGENT ACTION REQUIRED:
-1. 📅 Schedule inspection renewal immediately
-2. 📞 Contact inspection authorities
-3. 📋 Update documentation
-4. 🔍 Plan maintenance schedule
-5. 💰 Budget for renewal costs
-
-RECOMMENDED TIMELINE:
-• Week 1: Contact inspection authorities
-• Week 2: Schedule inspection appointment
-• Week 3: Complete inspection process
-• Week 4: Update documentation
-
-CONTACT INFORMATION:
-• Inspection Authority: [Contact Details]
-• Maintenance Team: [Contact Details]
-• Documentation: [Contact Details]
-
-This is an automated alert from the Crane Management System.
-Generated on: ${new Date().toLocaleString()}
-
-Best regards,
-Crane Management Team
-      `;
-    } else {
-      subject = `✅ CRANE STATUS UPDATE - ${crane["Unit #"]} - ALL CLEAR`;
-      text = `
-Dear Supervisor,
-
-✅ STATUS UPDATE: Your crane is in good standing.
-
-CRANE DETAILS:
-• Unit #: ${crane["Unit #"]}
-• Make & Model: ${crane["Make and Model"]}
-• Serial #: ${crane["Serial #"]}
-• Year: ${crane["Year"] || "N/A"}
-• Ton: ${crane["Ton"] || "N/A"}
-• Expiration Date: ${crane["Expiration"]}
-• Days Remaining: ${diffDays} days
-
-✅ STATUS: This crane expires in ${diffDays} days (more than 30 days away).
-
-CURRENT STATUS: ALL CLEAR ✅
-• No immediate action required
-• Crane is compliant with regulations
-• Continue normal operations
-
-RECOMMENDED PLANNING:
-• Mark calendar for renewal planning
-• Consider scheduling inspection 2-3 weeks before expiration
-• Update maintenance records as needed
-
-FUTURE REMINDERS:
-• You will receive alerts when expiration is within 30 days
-• Final warning will be sent 4 days before expiration
-
-This is an automated alert from the Crane Management System.
-Generated on: ${new Date().toLocaleString()}
-
-Best regards,
-Crane Management Team
-      `;
-    }
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: emailToSend,
-      subject: subject,
-      text: text.trim()
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.json({ 
-      message: `Email alert sent successfully to ${emailToSend}`,
-      alertType: expirationStatus.toLowerCase().replace(/\s+/g, '-'),
-      daysUntilExpiration: diffDays,
-      status: expirationStatus
-    });
-
-  } catch (err) {
-    console.error("Error sending email:", err);
-    
-    // Provide specific error messages based on error type
-    let errorMessage = "Error sending email. Please check your email configuration.";
-    
-    if (err.code === 'EAUTH') {
-      errorMessage = "Email authentication failed. Please check your Gmail credentials in the .env file.";
-    } else if (err.code === 'ECONNECTION') {
-      errorMessage = "Email connection failed. Please check your internet connection.";
-    } else if (err.code === 'ETIMEDOUT') {
-      errorMessage = "Email sending timed out. Please try again later.";
-    }
-    
-    res.status(500).json({ 
-      error: errorMessage,
-      details: err.message,
-      code: err.code 
-    });
-  }
-});
 
 /**
  * ==========================
@@ -1233,15 +939,52 @@ router.post("/:id/send-alert", authMiddleware, async (req, res) => {
       status = "OK";
     }
 
-    // Send email alert (you'll need to implement nodemailer here)
-    // For now, just return success
-    res.json({ 
-      message: "Email alert sent successfully", 
-      to: crane.alertEmail,
-      crane: crane["Unit #"],
-      status: status,
-      daysUntilExpiration: diffDays
-    });
+    // Import the working email function from autoEmailService
+    const { sendEmailAlert } = require('../services/autoEmailService');
+    
+    // Determine alert type and urgency based on status
+    let alertType = '';
+    let urgency = '';
+    
+    if (status === "EXPIRED") {
+      alertType = 'EXPIRED';
+      urgency = 'URGENT';
+    } else if (status === "NEAR TO EXPIRE") {
+      if (diffDays <= 7) {
+        alertType = 'EXPIRING THIS WEEK';
+        urgency = 'HIGH';
+      } else if (diffDays <= 14) {
+        alertType = 'EXPIRING IN 2 WEEKS';
+        urgency = 'MEDIUM';
+      } else {
+        alertType = 'EXPIRING THIS MONTH';
+        urgency = 'LOW';
+      }
+    } else {
+      alertType = 'STATUS UPDATE';
+      urgency = 'LOW';
+    }
+    
+    // Send the actual email using the working function
+    const emailSent = await sendEmailAlert(crane, alertType, urgency, diffDays);
+    
+    if (emailSent) {
+      res.json({ 
+        message: "Email alert sent successfully", 
+        to: crane.alertEmail,
+        crane: crane["Unit #"],
+        status: status,
+        daysUntilExpiration: diffDays,
+        alertType: alertType,
+        urgency: urgency
+      });
+    } else {
+      res.status(500).json({ 
+        error: "Failed to send email alert",
+        to: crane.alertEmail,
+        crane: crane["Unit #"]
+      });
+    }
 
   } catch (error) {
     console.error("Error sending email alert:", error);

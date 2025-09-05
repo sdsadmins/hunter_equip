@@ -52,7 +52,7 @@ export default function Login() {
         setMessage("❌ You're not registered yet. Please register first.");
         setErrorType("not_registered");
       } else if (err.response?.data?.errorType === "wrong_credentials") {
-        setMessage("❌ Email and password don't match. Please check your credentials.");
+        setMessage("❌ Email and password didn't match. Please check your credentials.");
         setErrorType("wrong_credentials");
       } else {
         setMessage("❌ " + (err.response?.data?.msg || "Login failed"));

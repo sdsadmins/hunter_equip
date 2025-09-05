@@ -302,5 +302,6 @@ const triggerManualCheck = async () => {
 module.exports = {
   startAutoEmailService,
   triggerManualCheck,
-  checkExpirationsAndSendAlerts
+  checkExpirationsAndSendAlerts,
+  sendEmailAlert
 };
