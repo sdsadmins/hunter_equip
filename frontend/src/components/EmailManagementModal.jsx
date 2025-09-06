@@ -9,16 +9,19 @@ export default function EmailManagementModal({ crane: initialCrane, onClose, onE
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [action, setAction] = useState(""); // "add", "edit", or "send"
+  const [showEmailInput, setShowEmailInput] = useState(false);
 
   useEffect(() => {
     if (initialCrane && initialCrane.alertEmail && initialCrane.alertEmail.trim()) {
       setCrane(initialCrane);
       setEmail(initialCrane.alertEmail);
       setAction("edit");
+      setShowEmailInput(false);
     } else {
       setCrane(initialCrane);
       setEmail("");
       setAction("add");
+      setShowEmailInput(true);
     }
   }, [initialCrane]);
 
@@ -177,6 +180,7 @@ export default function EmailManagementModal({ crane: initialCrane, onClose, onE
       
       // Update the action to edit mode
       setAction("edit");
+      setShowEmailInput(false);
       
       // Force a small delay to ensure state is updated before calling callback
       setTimeout(() => {
@@ -196,6 +200,10 @@ export default function EmailManagementModal({ crane: initialCrane, onClose, onE
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateClick = () => {
+    setShowEmailInput(true);
   };
 
   const handleRemoveEmail = async () => {
@@ -231,6 +239,7 @@ export default function EmailManagementModal({ crane: initialCrane, onClose, onE
       setMessage(`✅ Email removed successfully`);
       setEmail("");
       setAction("add");
+      setShowEmailInput(true);
       
       // Update local crane state
       const updatedCrane = { 
@@ -281,79 +290,81 @@ export default function EmailManagementModal({ crane: initialCrane, onClose, onE
             </div>
           </div>
 
-                     <div className="email-form">
-             <div className="form-group">
-               <label htmlFor="email">Alert Email Address</label>
-               <input
-                 id="email"
-                 type="email"
-                 value={email}
-                 onChange={(e) => setEmail(e.target.value)}
-                 placeholder="e.g., operator@company.com"
-                 disabled={loading}
-               />
-               <small>Enter the email address for sending expiration alerts</small>
-             </div>
+          <div className="email-form">
+            {showEmailInput && (
+              <div className="form-group">
+                <label htmlFor="email">Alert Email Address</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e.g., operator@company.com"
+                  disabled={loading}
+                />
+                <small>Enter the email address for sending expiration alerts</small>
+              </div>
+            )}
 
-                         <div className="form-actions">
-               {/* Always show Save button when there's an email */}
-               <button 
-                 type="button" 
-                 className="btn btn-success" 
-                 onClick={handleSaveEmail}
-                 disabled={loading}
-               >
-                 {loading ? "⏳ Saving..." : "💾 Save Email"}
-               </button>
-               
-               {/* Show Add Email button when no email exists */}
-               {!crane.alertEmail && (
-                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                   {loading ? "⏳ Adding..." : "➕ Add Email"}
-                 </button>
-               )}
-               
-               {/* Show Update Email button when email exists */}
-               {crane.alertEmail && (
-                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                   {loading ? "⏳ Updating..." : "💾 Update Email"}
-                 </button>
-               )}
-               
-               {/* Show Remove Email button when email exists */}
-               {crane.alertEmail && (
-                 <button 
-                   type="button" 
-                   className="btn btn-danger" 
-                   onClick={handleRemoveEmail}
-                   disabled={loading}
-                 >
-                   🗑️ Remove Email
-                 </button>
-               )}
-             </div>
+            <div className="form-actions">
+              {/* Show Save Email button when input is visible */}
+              {showEmailInput && (
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={handleSaveEmail}
+                  disabled={loading}
+                >
+                  {loading ? "⏳ Saving..." : "💾 Save Email"}
+                </button>
+              )}
+              
+              {/* Show Update button when email exists and input is hidden */}
+              {crane.alertEmail && !showEmailInput && (
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleUpdateClick}
+                  disabled={loading}
+                >
+                  💾 Update
+                </button>
+              )}
+              
+              {/* Show Send Alert button when email exists */}
+              {crane.alertEmail && (
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={handleSendAlert}
+                  disabled={loading}
+                >
+                  {loading ? "⏳ Sending..." : "📧 Send Alert"}
+                </button>
+              )}
+              
+              {/* Show Remove Email button when email exists */}
+              {crane.alertEmail && (
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={handleRemoveEmail}
+                  disabled={loading}
+                >
+                  🗑️ Remove Email
+                </button>
+              )}
+              
+              {/* Close button */}
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-small" 
+                onClick={onClose}
+              >
+                Close
+              </button>
+            </div>
           </div>
-
-                     {/* Show Send Alert section when there's an email in input or crane */}
-           {(email.trim() || crane.alertEmail) && (
-             <div className="send-alert-section">
-               <h4>📤 Send Alert</h4>
-               <p>Send an immediate expiration alert to the configured email.</p>
-               <button 
-                 className="btn btn-success"
-                 onClick={handleSendAlert}
-                 disabled={loading || !email.trim()}
-               >
-                 {loading ? "⏳ Sending..." : "📧 Send Alert Now"}
-               </button>
-             </div>
-           )}
-        </div>
-
-        <div className="email-modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Close
-          </button>
         </div>
       </div>
     </div>

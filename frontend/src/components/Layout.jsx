@@ -1,5 +1,6 @@
 import React from 'react';
 import './Layout.css';
+import InteractiveHelp from './InteractiveHelp';
 
 const Layout = ({ children }) => {
   return (
@@ -25,12 +26,15 @@ const Layout = ({ children }) => {
               <li><a href="/login">Login</a></li>
               <li><a href="/register">Register</a></li>
               <li><a href="/cranes">View Cranes</a></li>
+              <li><a href="#user-manual" onClick={(e) => { e.preventDefault(); document.querySelector('.user-manual-section')?.scrollIntoView({ behavior: 'smooth' }); }}>📖 User Manual</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>📞 Contact Us</h4>
-            <p>📍 123 Business St, City, Country</p>
-            <p>📞 +1 (555) 123-4567</p>
+            <p>📍 2829 Texas Ave -
+            Texas City, TX 77590-8259</p>
+            <p>📞 (409) 945-2382 -
+            Press “3” for rentals</p>
             <p>✉️ support@craneinspection.com</p>
           </div>
         </div>
@@ -52,6 +56,9 @@ const Layout = ({ children }) => {
           </div>
         </div>
       </footer>
+      
+      {/* Interactive Help Chat - appears on all pages */}
+      <InteractiveHelp />
     </div>
   );
 };

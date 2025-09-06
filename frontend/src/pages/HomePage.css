@@ -31,6 +31,12 @@
   margin-bottom: 25px;
 }
 
+.button-group .btn {
+  padding: 12px 24px;
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
 .btn {
   padding: 12px 24px;
   color: white;
@@ -42,7 +48,6 @@
   transition: all 0.3s ease;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
 }
-
 .btn:hover {
   transform: translateY(-2px);
   opacity: 0.9;
@@ -60,13 +65,31 @@
   background-color: #ff9800;
 }
 
+
+/* User Manual Section */
+.user-manual-section {
+  margin-top: 60px;
+  padding-top: 30px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  
+}
+
+
 /* Table container */
 .table-container {
+  display: inline-block;
   margin-top: 40px;
   background: #2a2a2a; /* Dark card background */
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.5);
+  max-width: fit-content;
+}
+.user-manual-section h2 {
+  display: inline-block;
+  background: #2a2a2a;
+  padding: 10px 20px;
+  border-radius: 8px;
 }
 
 /* Table styling */
@@ -105,7 +128,7 @@
 /* Web Alerts Styling for HomePage */
 .web-alerts-home {
   position: absolute;
-  top: 20px;
+  top: 80px; /* Positioned below the contact info */
   right: 20px;
   cursor: pointer;
   display: flex;
@@ -118,6 +141,31 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
   z-index: 1000;
+}
+
+/* Contact Info Styling */
+.contact-info-home {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 15px;
+  border-radius: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.contact-info-home:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.phone-number {
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .web-alerts-home:hover {
@@ -216,6 +264,84 @@
   60% { transform: translateY(-2px); }
 }
 
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 20px 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.pagination-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.pagination-btn.active:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.pagination-numbers {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pagination-ellipsis {
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0 5px;
+  font-size: 0.9rem;
+}
+
 /* Responsive Design for HomePage */
 @media (max-width: 768px) {
   .web-alerts-home {
@@ -232,5 +358,43 @@
   .btn {
     width: 100%;
     max-width: 300px;
+  }
+
+  .pagination-container {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px 20px;
+  }
+  
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 35px;
+  }
+  
+  .pagination-numbers {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-container {
+    padding: 12px 15px;
+  }
+  
+  .pagination-btn {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    min-width: 30px;
+  }
+  
+  .pagination-info {
+    font-size: 0.85rem;
+    text-align: center;
   }
 }

@@ -1,0 +1,288 @@
+/* Simple User Manual Styles - Clean and Minimal */
+.user-manual {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 8px;
+  background: linear-gradient(135deg, rgba(15, 20, 25, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border-radius: 15px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.manual-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.manual-header h2 {
+  color: #ffffff;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.manual-header p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Help Tabs */
+.help-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 12px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.tab-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.tab-button.active:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+/* Help Content */
+.help-content {
+  width: 100%;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Manual Content */
+.manual-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 25px;
+  width: 100%;
+}
+
+/* Section Styles */
+.section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  min-height: 350px;
+}
+
+.section h3 {
+  color: #ffffff;
+  font-size: 1.4rem;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+  border-bottom: 2px solid #3b82f6;
+  padding-bottom: 8px;
+}
+
+.section h4 {
+  color: #e0e7ff;
+  font-size: 1.1rem;
+  margin: 20px 0 12px 0;
+  font-weight: 600;
+}
+
+.section p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.section ul, .section ol {
+  margin: 12px 0;
+  padding-left: 25px;
+}
+
+.section li {
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.section strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Issue Items */
+.issue-item, .faq-item, .setup-item, .contact-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-left: 4px solid #3b82f6;
+  transition: all 0.3s ease;
+}
+
+.issue-item:hover, .faq-item:hover, .setup-item:hover, .contact-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(5px);
+}
+
+.issue-item h4, .faq-item h4, .setup-item h4, .contact-item h4 {
+  color: #e0e7ff;
+  font-size: 1.1rem;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+
+.issue-item p, .faq-item p, .setup-item p, .contact-item p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.issue-item ol, .faq-item ol, .setup-item ol, .contact-item ol {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.issue-item li, .faq-item li, .setup-item li, .contact-item li {
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Manual Footer */
+.manual-footer {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.manual-footer p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .user-manual {
+    margin: 10px;
+    padding: 30px 20px;
+  }
+  
+  .manual-header h2 {
+    font-size: 2rem;
+  }
+  
+  .help-tabs {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .tab-button {
+    width: 100%;
+    max-width: 200px;
+    min-width: auto;
+  }
+  
+  .manual-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .section {
+    padding: 25px 20px;
+  }
+  
+  .section h3 {
+    font-size: 1.5rem;
+  }
+  
+  .section h4 {
+    font-size: 1.2rem;
+  }
+  
+  .section p {
+    font-size: 1rem;
+  }
+  
+  .issue-item, .faq-item, .setup-item, .contact-item {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .manual-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .manual-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-manual {
+    padding: 20px 15px;
+  }
+  
+  .section {
+    padding: 20px 15px;
+  }
+  
+  .section h3 {
+    font-size: 1.3rem;
+  }
+  
+  .section h4 {
+    font-size: 1.1rem;
+  }
+}

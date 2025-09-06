@@ -3,11 +3,14 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css"; // ✅ Import CSS
 import config from "../config";
+import UserManual from "../components/UserManual";
 
 export default function HomePage() {
   const [cranes, setCranes] = useState([]);
   const [showCranes, setShowCranes] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(8);
   const navigate = useNavigate();
 
   // Load notifications automatically when component mounts
@@ -215,6 +218,28 @@ export default function HomePage() {
     return 0;
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(sortedCranes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCranes = sortedCranes.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
   const handleCraneClick = () => {
     navigate("/login");
   };
@@ -225,6 +250,11 @@ export default function HomePage() {
       <p className="home-subtitle">
         Manage crane inspections efficiently and keep track of expiration dates.
       </p>
+
+      {/* Contact Info - positioned absolutely in top-right */}
+      <div className="contact-info-home">
+        <span className="phone-number">📞 (409) 945-2382</span>
+      </div>
 
       {/* Web Alerts - positioned absolutely in top-right */}
       {alerts.length > 0 && (
@@ -282,7 +312,7 @@ export default function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {sortedCranes.map((crane, index) => {
+              {currentCranes.map((crane, index) => {
                 const expirationStatus = getExpirationStatus(crane.expiration);
                 return (
                   <tr key={index} onClick={handleCraneClick}>
@@ -299,6 +329,64 @@ export default function HomePage() {
               })}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-container">
+              <div className="pagination-info">
+                <span>
+                  Showing {startIndex + 1} to {Math.min(endIndex, sortedCranes.length)} of {sortedCranes.length} cranes
+                </span>
+              </div>
+              <div className="pagination-controls">
+                <button 
+                  className="pagination-btn"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  title="Previous page"
+                >
+                  ← Previous
+                </button>
+                
+                <div className="pagination-numbers">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    // Show first page, last page, current page, and pages around current page
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                          onClick={() => handlePageChange(page)}
+                          title={`Go to page ${page}`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    } else if (
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    ) {
+                      return <span key={page} className="pagination-ellipsis">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                
+                <button 
+                  className="pagination-btn"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  title="Next page"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -306,6 +394,10 @@ export default function HomePage() {
         <p className="no-cranes">No cranes available. Please upload an Excel file from the supervisor dashboard.</p>
       )}
 
+      {/* User Manual Section - Keep as it was */}
+      <div className="user-manual-section">
+        <UserManual />
+      </div>
 
     </div>
   );

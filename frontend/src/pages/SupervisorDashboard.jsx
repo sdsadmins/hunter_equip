@@ -17,11 +17,72 @@ export default function SupervisorDashboard() {
   const [selectedCrane, setSelectedCrane] = useState(null);
   const [alertSummary, setAlertSummary] = useState({ expired: 0, expiring: 0, ok: 0 });
   const [statusFilter, setStatusFilter] = useState("all");
-  const [filterEnabled, setFilterEnabled] = useState(false);
-  const [filterType, setFilterType] = useState("month");
-  const [toggleFilterValue, setToggleFilterValue] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
   const [backendConnected, setBackendConnected] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(8);
   const navigate = useNavigate();
+
+  const showSuccessMessage = (message) => {
+    // Create a success message overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      font-family: Arial, sans-serif;
+    `;
+    
+    const messageBox = document.createElement('div');
+    messageBox.style.cssText = `
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      padding: 30px 40px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      font-size: 18px;
+      font-weight: 600;
+      max-width: 400px;
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    messageBox.innerHTML = `
+      <div style="font-size: 24px; margin-bottom: 10px;">✅</div>
+      <div>${message}</div>
+    `;
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateY(-50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    overlay.appendChild(messageBox);
+    document.body.appendChild(overlay);
+    
+    // Remove overlay after 2 seconds
+    setTimeout(() => {
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    }, 2000);
+  };
 
   // Helper function to convert Excel date serial numbers
   const convertExcelDate = (dateValue) => {
@@ -257,7 +318,7 @@ export default function SupervisorDashboard() {
         
         setAlertSummary({ expired: expiredCount, expiring: expiringCount, ok: okCount });
         
-        alert("✅ Crane deleted successfully from database!");
+        showSuccessMessage("Crane deleted successfully from database!");
       } else {
         alert("❌ Failed to delete crane from database. Please try again.");
       }
@@ -409,33 +470,9 @@ export default function SupervisorDashboard() {
       return;
     }
     
-    // Get recipient email
-    const recipientEmail = prompt(`Enter recipient email for crane ${crane["Unit #"]}:`);
-    if (!recipientEmail) return;
-    
-    try {
-      const token = localStorage.getItem("token");
-      // Try local backend first
-      try {
-        await axios.post(
-          `${config.API_URL}/api/cranes/${crane._id}/send-alert`,
-          { recipientEmail },
-          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
-        );
-      } catch (localError) {
-        // If local fails, try remote
-        console.log("Local backend failed, trying remote...");
-        await axios.post(
-          `${config.FALLBACK_API_URL}/api/cranes/${crane._id}/send-alert`,
-          { recipientEmail },
-          { headers: { Authorization: `Bearer ${token}` }, timeout: 5000 }
-        );
-      }
-      alert(`✅ Email alert sent successfully for crane ${crane["Unit #"]}!`);
-    } catch (error) {
-      console.error("Error sending email alert:", error);
-      alert(`❌ Failed to send email alert: ${error.response?.data?.error || error.message}`);
-    }
+    // Open email management modal for the selected crane
+    setSelectedCrane(crane);
+    setEmailModalOpen(true);
   };
 
   const handleSendSummaryReport = async () => {
@@ -688,32 +725,67 @@ export default function SupervisorDashboard() {
         return false;
       }
       
-      // Toggle filter filtering
-      if (filterEnabled && toggleFilterValue) {
+      // Month filter
+      if (monthFilter) {
         try {
           const craneExpiration = convertExcelDate(crane.Expiration);
           if (!craneExpiration) return false;
           
-          switch (filterType) {
-            case "month":
-              if (toggleFilterValue.includes('/')) {
-                const [month, year] = toggleFilterValue.split('/');
-                if (month && year) {
-                  return craneExpiration.includes(`/${month}/${year}`);
-                }
-              }
+          const monthValue = monthFilter.toLowerCase().trim();
+          const monthNames = {
+            'jan': '01', 'january': '01',
+            'feb': '02', 'february': '02',
+            'mar': '03', 'march': '03',
+            'apr': '04', 'april': '04',
+            'may': '05',
+            'jun': '06', 'june': '06',
+            'jul': '07', 'july': '07',
+            'aug': '08', 'august': '08',
+            'sep': '09', 'september': '09',
+            'oct': '10', 'october': '10',
+            'nov': '11', 'november': '11',
+            'dec': '12', 'december': '12'
+          };
+          
+          let monthNumber = null;
+          
+          // Check if it's a month name (full or short)
+          if (monthNames[monthValue]) {
+            monthNumber = monthNames[monthValue];
+          }
+          // Check if it's a month number (1-12)
+          else if (/^(0?[1-9]|1[0-2])$/.test(monthValue)) {
+            monthNumber = monthValue.padStart(2, '0');
+          }
+          
+          // Apply the filter if we found a valid month
+          if (monthNumber) {
+            if (!craneExpiration.includes(`/${monthNumber}/`)) {
               return false;
-              
-            case "year":
-              return craneExpiration.includes(`/${toggleFilterValue}`);
-              
-            case "date":
-              return craneExpiration === toggleFilterValue;
-              
-            default:
-              return true;
+            }
           }
         } catch (error) {
+          console.error('Error filtering by month:', error);
+          return false;
+        }
+      }
+
+      // Year filter
+      if (yearFilter) {
+        try {
+          const craneExpiration = convertExcelDate(crane.Expiration);
+          if (!craneExpiration) return false;
+          
+          const yearValue = yearFilter.trim();
+          
+          // Check if it's a year (4 digits)
+          if (/^\d{4}$/.test(yearValue)) {
+            if (!craneExpiration.includes(`/${yearValue}`)) {
+              return false;
+            }
+          }
+        } catch (error) {
+          console.error('Error filtering by year:', error);
           return false;
         }
       }
@@ -805,6 +877,34 @@ export default function SupervisorDashboard() {
       return 0;
     });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredCranes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCranes = filteredCranes.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterValue, statusFilter, monthFilter, yearFilter]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
   return (
     <div className="supervisor-dashboard-wrapper">
       <div className="supervisor-dashboard">
@@ -879,121 +979,92 @@ export default function SupervisorDashboard() {
             )}
           </div>
           
-          {/* Filter Options (only show when toggle is ON) */}
-          {filterEnabled && (
-            <div className="filter-options" style={{ marginBottom: "15px", textAlign: "center" }}>
-              <select 
-                value={filterType} 
-                onChange={(e) => setFilterType(e.target.value)}
-                style={{ padding: "8px", marginRight: "10px", borderRadius: "4px" }}
-              >
-                <option value="month">By Month</option>
-                <option value="year">By Year</option>
-                <option value="date">By Date</option>
-              </select>
-              
-              {filterType === "month" && (
-                <div style={{ display: "inline-block" }}>
-                  <select 
-                    value={toggleFilterValue.split('/')[0] || ""} 
-                    onChange={(e) => setToggleFilterValue(`${e.target.value}/${toggleFilterValue.split('/')[1] || ""}`)}
-                    style={{ padding: "8px", marginRight: "5px", borderRadius: "4px" }}
-                  >
-                    <option value="">Month</option>
-                    <option value="01">Jan</option>
-                    <option value="02">Feb</option>
-                    <option value="03">Mar</option>
-                    <option value="04">Apr</option>
-                    <option value="05">May</option>
-                    <option value="06">Jun</option>
-                    <option value="07">Jul</option>
-                    <option value="08">Aug</option>
-                    <option value="09">Sep</option>
-                    <option value="10">Oct</option>
-                    <option value="11">Nov</option>
-                    <option value="12">Dec</option>
-                  </select>
+          
+          {/* Filter Section */}
+          <div className="filter-section">
+            <div className="filter-container">
+              <div className="filter-buttons">
+                <div className="filter-input-group filter-column">
+                  <span className="filter-label">Month:</span>
                   <input
-                    type="number"
-                    placeholder="Year"
-                    value={toggleFilterValue.split('/')[1] || ""}
-                    onChange={(e) => setToggleFilterValue(`${toggleFilterValue.split('/')[0] || ""}/${e.target.value}`)}
-                    style={{ padding: "8px", width: "80px", borderRadius: "4px" }}
+                    type="text"
+                    placeholder="Jan, Feb, Mar, 1, 2, 3..."
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                    className="filter-input-small"
+                    title="Enter month name (Jan, Feb, Mar) or number (1, 2, 3, etc.)"
                   />
                 </div>
-              )}
-              
-              {filterType === "year" && (
-                <input
-                  type="number"
-                  placeholder="Enter Year (e.g., 2025)"
-                  value={toggleFilterValue}
-                  onChange={(e) => setToggleFilterValue(e.target.value)}
-                  style={{ padding: "8px", width: "150px", borderRadius: "4px" }}
-                />
-              )}
-              
-              {filterType === "date" && (
+                <div className="filter-input-group filter-column">
+                  <span className="filter-label">Year:</span>
                 <input
                   type="text"
-                  placeholder="Enter Date (DD/MM/YYYY)"
-                  value={toggleFilterValue}
-                  onChange={(e) => setToggleFilterValue(e.target.value)}
-                  style={{ padding: "8px", width: "150px", borderRadius: "4px" }}
-                />
-              )}
+                    placeholder="2025, 2026..."
+                    value={yearFilter}
+                    onChange={(e) => setYearFilter(e.target.value)}
+                    className="filter-input-small"
+                    title="Enter year (2025, 2026, etc.)"
+                  />
             </div>
-          )}
-          
+                {(monthFilter || yearFilter) && (
+                  <button
+                    onClick={() => {
+                      setMonthFilter('');
+                      setYearFilter('');
+                    }}
+                    className="clear-all-btn"
+                    title="Clear all filters"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Action Controls */}
           <div className="search-controls">
             <div className="search-container">
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <button 
-                  className={`filter-toggle-btn ${filterEnabled ? 'active' : 'inactive'}`}
-                  onClick={() => setFilterEnabled(!filterEnabled)}
-                  style={{ marginRight: '10px' }}
-                >
-                  <span className="toggle-icon">{filterEnabled ? '🔍' : '⚪'}</span>
-                  <span className="toggle-text">{filterEnabled ? 'Sort By' : 'Sort By'}</span>
-                </button>
+              <div className="search-row">
+                {/* Search Input */}
+                <div className="search-input-container">
                 <input
                   type="text"
-                  placeholder="🔍 Search: Unit #, Model, Serial, Year..."
+                    placeholder="🔍 Search..."
                   value={filterValue}
                   onChange={(e) => setFilterValue(e.target.value)}
-                  className="search-input"
-                  title="Search by Unit # (exact or starts with), Make & Model, Serial #, Year, or Ton"
+                    className="search-input-small"
+                    title="Search by Unit #, Model, Serial, Year..."
                 />
                 {filterValue && (
                   <button
                     onClick={() => setFilterValue('')}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      color: 'white',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem'
-                    }}
+                      className="clear-search-btn"
                     title="Clear search"
                   >
                     ✕
                   </button>
                 )}
               </div>
-              {(filterValue || (filterEnabled && toggleFilterValue)) && (
+              </div>
+              {(filterValue || monthFilter || yearFilter) && (
                 <div className="search-help">
                   <small>
                     Showing {filteredCranes.length} of {cranes.length} cranes
+                    {totalPages > 1 && (
+                      <span style={{color: '#3b82f6'}}> • Page {currentPage} of {totalPages}</span>
+                    )}
                     {filterValue && filterValue.length < 3 && filteredCranes.length > 10 && (
                       <span style={{color: '#ff9800'}}> • Tip: Type 3+ characters for better results</span>
                     )}
                     {filterValue && filterValue.length >= 3 && (
                       <span style={{color: '#4caf50'}}> • Search: "{filterValue}"</span>
                     )}
-                    {filterEnabled && toggleFilterValue && (
-                      <span style={{color: '#ffaa00'}}> • Filter: {filterType} - {toggleFilterValue}</span>
+                    {monthFilter && (
+                      <span style={{color: '#ffaa00'}}> • Month: {monthFilter}</span>
+                    )}
+                    {yearFilter && (
+                      <span style={{color: '#ffaa00'}}> • Year: {yearFilter}</span>
                     )}
                   </small>
                 </div>
@@ -1003,19 +1074,19 @@ export default function SupervisorDashboard() {
     href="/add-crane" 
     target="_blank" 
     rel="noopener noreferrer" 
-    className="btn btn-primary"
+    className="btn btn-primary btn-wide"
   >
     ➕ Add New Crane
   </a>
             <button 
     onClick={handlePrintAllCranes}
-    className="btn btn-secondary"
+    className="btn btn-secondary btn-wide"
   >
     📄 Print All Cranes
   </button>
 
             <button 
-              className="btn btn-warning" 
+              className="btn btn-warning btn-wide" 
               onClick={handleTriggerAutoEmail}
               title="Manually trigger auto-email service for testing"
             >
@@ -1081,12 +1152,70 @@ export default function SupervisorDashboard() {
 
         <div className="table-section">
           <CraneTable
-            cranes={filteredCranes}
+            cranes={currentCranes}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onEmailAlert={handleEmailAlert}
           />
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="pagination-container">
+            <div className="pagination-info">
+              <span>
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredCranes.length)} of {filteredCranes.length} cranes
+              </span>
+            </div>
+            <div className="pagination-controls">
+              <button 
+                className="pagination-btn"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                title="Previous page"
+              >
+                ← Previous
+              </button>
+              
+              <div className="pagination-numbers">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current page
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                        onClick={() => handlePageChange(page)}
+                        title={`Go to page ${page}`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (
+                    page === currentPage - 2 ||
+                    page === currentPage + 2
+                  ) {
+                    return <span key={page} className="pagination-ellipsis">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              
+              <button 
+                className="pagination-btn"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                title="Next page"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Modal removed - editing now opens in new tab */}
       </div>
