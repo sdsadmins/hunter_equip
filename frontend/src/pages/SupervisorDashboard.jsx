@@ -21,7 +21,7 @@ export default function SupervisorDashboard() {
   const [yearFilter, setYearFilter] = useState("");
   const [backendConnected, setBackendConnected] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(8);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
   const navigate = useNavigate();
 
   const showSuccessMessage = (message) => {
@@ -84,63 +84,97 @@ export default function SupervisorDashboard() {
     }, 2000);
   };
 
-  // Helper function to convert Excel date serial numbers
+  // Helper function to convert any date to MM/DD/YYYY
   const convertExcelDate = (dateValue) => {
     if (!dateValue) return "";
-    
-    // If it's already a string, check if it's a number string
-    if (typeof dateValue === 'string') {
-      // Check if it's a string number that looks like Excel date serial
-      if (/^\d{5,}$/.test(dateValue)) {
-        try {
-          const excelDate = new Date((parseInt(dateValue) - 25569) * 86400 * 1000);
-          const day = String(excelDate.getDate()).padStart(2, '0');
-          const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-          const year = excelDate.getFullYear();
-          return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
-        } catch (error) {
-          return dateValue; // Return original if conversion fails
-        }
+
+    // Excel serial as string
+    if (typeof dateValue === 'string' && /^\d{5,}$/.test(dateValue)) {
+      try {
+        const excelDate = new Date((parseInt(dateValue, 10) - 25569) * 86400 * 1000);
+        const mm = String(excelDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(excelDate.getDate()).padStart(2, '0');
+        const yyyy = excelDate.getFullYear();
+        return `${mm}/${dd}/${yyyy}`;
+      } catch {
+        return dateValue;
       }
-      return dateValue; // Return as is if it's not a number string
     }
-    
-    // If it's a number and looks like an Excel date serial number
+
+    // If string in DD/MM/YYYY or MM/DD/YYYY
+    if (typeof dateValue === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) {
+      const [p1, p2, y] = dateValue.split('/');
+      const a = parseInt(p1, 10);
+      const b = parseInt(p2, 10);
+      // If first part > 12 and second <= 12, it's DD/MM/YYYY → swap
+      if (a > 12 && b <= 12) {
+        return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${y}`;
+      }
+      // Already MM/DD/YYYY
+      return `${p1}/${p2}/${y}`;
+    }
+
+    // Excel serial as number
     if (typeof dateValue === 'number' && dateValue > 1000) {
       try {
         const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
-        const day = String(excelDate.getDate()).padStart(2, '0');
-        const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-        const year = excelDate.getFullYear();
-        return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
-      } catch (error) {
-        return dateValue.toString(); // Fallback to string if conversion fails
+        const mm = String(excelDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(excelDate.getDate()).padStart(2, '0');
+        const yyyy = excelDate.getFullYear();
+        return `${mm}/${dd}/${yyyy}`;
+      } catch {
+        return String(dateValue);
       }
     }
-    
-    return dateValue.toString();
+
+    // Fallback: try to parse generic input
+    try {
+      const d = new Date(dateValue);
+      if (isNaN(d.getTime())) return String(dateValue);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    } catch {
+      return String(dateValue);
+    }
   };
 
-  // === Status Calculation ===
+  // === Status Calculation (Fixed to match working Home Page logic) ===
   const getStatus = (expiration) => {
     if (!expiration) return "Inactive";
     try {
-      const convertedExpiration = convertExcelDate(expiration);
-      // Parse DD/MM/YYYY format
-      const parts = convertedExpiration.split('/');
+      // Normalize to MM/DD/YYYY first
+      const dateString = convertExcelDate(expiration);
+      // Parse MM/DD/YYYY format
+      const parts = dateString.split('/');
       if (parts.length === 3) {
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+        const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+        const day = parseInt(parts[1]);
         const year = parseInt(parts[2]);
-        const expDate = new Date(year, month, day);
+        const expirationDate = new Date(year, month, day);
         const today = new Date();
-        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+        
+        // Set both dates to start of day for accurate comparison
+        today.setHours(0, 0, 0, 0);
+        expirationDate.setHours(0, 0, 0, 0);
+        
+        // Calculate days difference using the same logic as Home Page
+        const diffTime = expirationDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Debug: Log status calculation for specific dates
+        if (dateString.includes("2025") || dateString.includes("2024")) {
+          console.log(`Date: ${dateString}, ExpDate: ${expirationDate.toISOString()}, Today: ${today.toISOString()}, DiffDays: ${diffDays}`);
+        }
+        
         if (diffDays < 0) return "Expired";
         if (diffDays <= 30) return "Near to Expire";
         return "OK";
       }
       return "Inactive";
     } catch (error) {
+      console.error("Error parsing date:", expiration, error);
       return "Inactive"; // if date parsing fails, show as inactive
     }
   };
@@ -254,19 +288,7 @@ export default function SupervisorDashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this crane?")) return;
     
-    // Ask for secret code - this is the only requirement
-    const secretCode = prompt("Enter secret code to delete this crane:");
-    if (!secretCode) {
-      alert("No secret code entered. Delete cancelled.");
-      return;
-    }
-    
-    if (secretCode !== "admin@123") {
-      alert("❌ Wrong secret code! Delete cancelled.");
-      return;
-    }
-    
-    // Secret code is correct - proceed with delete
+    // Proceed with delete
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -713,12 +735,17 @@ export default function SupervisorDashboard() {
 
   // Apply filter + status + sort
   const filteredCranes = cranes
-    .map((crane) => ({
-      ...crane,
-      status: getStatus(crane.Expiration),
-      active: Boolean(crane.active), // Ensure active is boolean
-      isDuplicate: duplicateUnits.includes(crane["Unit #"]) // Mark duplicate Unit #s
-    }))
+    .map((crane) => {
+      const status = getStatus(crane.Expiration);
+      // Debug: Log all cranes to see their status calculation
+      console.log(`Crane ${crane["Unit #"]}: Expiration=${crane.Expiration}, Status=${status}`);
+      return {
+        ...crane,
+        status: status,
+        active: Boolean(crane.active), // Ensure active is boolean
+        isDuplicate: duplicateUnits.includes(crane["Unit #"]) // Mark duplicate Unit #s
+      };
+    })
     .filter((crane) => {
       // Status filtering
       if (statusFilter !== "all" && crane.status !== statusFilter) {
@@ -760,7 +787,7 @@ export default function SupervisorDashboard() {
           
           // Apply the filter if we found a valid month
           if (monthNumber) {
-            if (!craneExpiration.includes(`/${monthNumber}/`)) {
+            if (!craneExpiration.startsWith(`${monthNumber}/`)) {
               return false;
             }
           }
@@ -850,25 +877,31 @@ export default function SupervisorDashboard() {
       return false;
     })
     .sort((a, b) => {
-      // First sort by active status (active cranes first)
+      // Sort by status priority: OK (1+ month) > Near to Expire (within month) > Expired > Inactive
+      const order = { "OK": 1, "Near to Expire": 2, "Expired": 3, "Inactive": 4 };
+      const statusA = order[a.status] || 999; // Default to end if status not found
+      const statusB = order[b.status] || 999;
+      
+      // Debug: Log sorting for all cranes to see the order
+      console.log(`Sorting: ${a["Unit #"]} (${a.status}=${statusA}) vs ${b["Unit #"]} (${b.status}=${statusB})`);
+      
+      if (statusA !== statusB) {
+        return statusA - statusB;
+      }
+      
+      // Within same status group, sort by active status (active cranes first)
       if (a.active !== b.active) {
         return a.active ? -1 : 1; // Active cranes come first
       }
       
-      // Then sort by status order
-      const order = { "OK": 1, "Near to Expire": 2, "Expired": 3, "Inactive": 4 };
-      if (order[a.status] !== order[b.status]) {
-        return order[a.status] - order[b.status];
-      }
-      
-      // If same status, sort by expiration date (earliest first - ascending)
+      // Within same status and active state, sort by expiration date (earliest first)
       try {
         const partsA = a.Expiration ? convertExcelDate(a.Expiration).split('/') : [];
         const partsB = b.Expiration ? convertExcelDate(b.Expiration).split('/') : [];
         if (partsA.length === 3 && partsB.length === 3) {
-          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
-          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
-          return dateA - dateB;
+          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[0]) - 1, parseInt(partsA[1]));
+          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[0]) - 1, parseInt(partsB[1]));
+          return dateA - dateB; // Earliest expiration first
         }
       } catch (error) {
         // If date parsing fails, keep original order
@@ -876,6 +909,19 @@ export default function SupervisorDashboard() {
       
       return 0;
     });
+
+  // Debug: Log current filters and final sorted order
+  console.log("=== CURRENT FILTERS ===");
+  console.log(`Status Filter: ${statusFilter}`);
+  console.log(`Search Filter: "${filterValue}"`);
+  console.log(`Month Filter: "${monthFilter}"`);
+  console.log(`Year Filter: "${yearFilter}"`);
+  console.log(`Total Cranes: ${cranes.length}, Filtered: ${filteredCranes.length}`);
+  console.log("=== FINAL SORTED CRANES ORDER ===");
+  filteredCranes.slice(0, 10).forEach((crane, index) => {
+    console.log(`${index + 1}. ${crane["Unit #"]} - Status: ${crane.status} - Active: ${crane.active}`);
+  });
+  console.log("=== END SORTED ORDER ===");
 
   // Pagination logic
   const totalPages = Math.ceil(filteredCranes.length / itemsPerPage);
@@ -1156,6 +1202,9 @@ export default function SupervisorDashboard() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onEmailAlert={handleEmailAlert}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
+            setCurrentPage={setCurrentPage}
           />
         </div>
 
@@ -1235,3 +1284,4 @@ export default function SupervisorDashboard() {
     </div>
   );
 }
+

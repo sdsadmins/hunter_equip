@@ -88,7 +88,7 @@ function convertExcelDate(dateValue) {
         const day = String(excelDate.getDate()).padStart(2, '0');
         const month = String(excelDate.getMonth() + 1).padStart(2, '0');
         const year = excelDate.getFullYear();
-        return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+        return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
       } catch (error) {
         return dateValue; // Return original if conversion fails
       }
@@ -103,7 +103,7 @@ function convertExcelDate(dateValue) {
       const day = String(excelDate.getDate()).padStart(2, '0');
       const month = String(excelDate.getMonth() + 1).padStart(2, '0');
       const year = excelDate.getFullYear();
-      return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+      return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
     } catch (error) {
       return dateValue.toString(); // Fallback to string if conversion fails
     }
@@ -111,6 +111,65 @@ function convertExcelDate(dateValue) {
   
   return dateValue.toString();
 }
+
+// Convert only when it is clearly DD/MM/YYYY; otherwise leave as MM/DD/YYYY
+const convertDateFormat = (dateString) => {
+  if (!dateString) return dateString;
+
+  if (typeof dateString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+    const [p1, p2, y] = dateString.split('/');
+    const a = parseInt(p1, 10);
+    const b = parseInt(p2, 10);
+    // If first part cannot be a valid month but second can, treat as DD/MM/YYYY and swap
+    if (a > 12 && b >= 1 && b <= 12) {
+      return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${y}`;
+    }
+    // Otherwise assume already MM/DD/YYYY and return as-is
+    return `${p1}/${p2}/${y}`;
+  }
+
+  return dateString;
+};
+
+// Normalize any incoming expiration to strict MM/DD/YYYY before saving
+const normalizeExpirationForStorage = (value) => {
+  if (!value) return value;
+
+  // Excel serial as string
+  if (typeof value === 'string' && /^\d{5,}$/.test(value)) {
+    return convertExcelDate(value);
+  }
+
+  // If looks like DD/MM/YYYY or MM/DD/YYYY
+  if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [p1, p2, y] = value.split('/');
+    const a = parseInt(p1, 10);
+    const b = parseInt(p2, 10);
+    if (a > 12 && b <= 12) {
+      // DD/MM/YYYY -> MM/DD/YYYY
+      return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${y}`;
+    }
+    // Already MM/DD/YYYY
+    return `${p1}/${p2}/${y}`;
+  }
+
+  // Excel serial as number
+  if (typeof value === 'number' && value > 1000) {
+    return convertExcelDate(value);
+  }
+
+  // Fallback: try to parse
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return value;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  } catch {
+    return value;
+  }
+};
 
 /**
  * ========================
@@ -137,7 +196,7 @@ router.get("/public", async (req, res) => {
       makeModel: c["Make and Model"],
       ton: c["Ton"],
       serial: c["Serial #"],
-      expiration: convertExcelDate(c["Expiration"]),
+      expiration: convertDateFormat(convertExcelDate(c["Expiration"])),
       inUse: c["Currently In Use"],
     }));
     console.log("Formatted cranes:", formatted);
@@ -178,7 +237,7 @@ router.get("/supervisor", authMiddleware, async (req, res) => {
     // Convert Excel date serial numbers in the response
     const processedCranes = cranes.map(crane => {
       const craneObj = crane.toObject();
-      craneObj.Expiration = convertExcelDate(craneObj.Expiration);
+      craneObj.Expiration = convertDateFormat(convertExcelDate(craneObj.Expiration));
       
       // Ensure active field is preserved as boolean
       craneObj.active = Boolean(craneObj.active);
@@ -234,6 +293,11 @@ router.post("/", authMiddleware, async (req, res) => {
     // Update the request body with cleaned Unit #
     req.body["Unit #"] = cleanUnitNumber;
     
+    // Normalize expiration to MM/DD/YYYY before save
+    if (req.body["Expiration"]) {
+      req.body["Expiration"] = normalizeExpirationForStorage(req.body["Expiration"]);
+    }
+
     const crane = new Crane(req.body);
     await crane.save();
     res.json(crane);
@@ -281,6 +345,11 @@ router.put("/:id", authMiddleware, async (req, res) => {
       req.body["Unit #"] = cleanUnitNumber;
     }
     
+    // Normalize expiration to MM/DD/YYYY if provided
+    if (req.body["Expiration"]) {
+      req.body["Expiration"] = normalizeExpirationForStorage(req.body["Expiration"]);
+    }
+
     // Ensure active field is explicitly set as boolean
     const updateData = {
       ...req.body,

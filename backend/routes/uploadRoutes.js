@@ -8,6 +8,58 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// Normalize expiration to strict MM/DD/YYYY
+const normalizeExpirationForStorage = (value) => {
+  if (!value) return value;
+
+  // Excel serial (number)
+  if (typeof value === 'number' && value > 1000) {
+    const d = new Date((value - 25569) * 86400 * 1000);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  // Excel serial as string
+  if (typeof value === 'string' && /^\d{5,}$/.test(value)) {
+    const d = new Date((parseInt(value, 10) - 25569) * 86400 * 1000);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  // If looks like DD-MM-YYYY -> treat as DD/MM/YYYY then normalize
+  if (typeof value === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(value)) {
+    value = value.replace(/-/g, '/');
+  }
+
+  // If looks like DD/MM/YYYY or MM/DD/YYYY
+  if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [p1, p2, y] = value.split('/');
+    const a = parseInt(p1, 10);
+    const b = parseInt(p2, 10);
+    if (a > 12 && b <= 12) {
+      // DD/MM/YYYY -> MM/DD/YYYY
+      return `${p2.padStart(2, '0')}/${p1.padStart(2, '0')}/${y}`;
+    }
+    return `${p1}/${p2}/${y}`; // already MM/DD/YYYY
+  }
+
+  // Fallback generic date parsing
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return value;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  } catch {
+    return value;
+  }
+};
+
 // Test route to check if upload routes are working
 router.get("/test", (req, res) => {
   res.json({ message: "Upload routes are working!" });
@@ -93,28 +145,9 @@ router.post("/", upload.single("file"), async (req, res) => {
     const cranes = sheetData.map((row, index) => {
       console.log(`Processing row ${index + 1}:`, row);
       
-      // Convert Excel date serial number to readable date
+      // Normalize any incoming expiration to MM/DD/YYYY
       let expirationDate = row["Expiration"] || row["expiration"] || "";
-      
-      // Handle DD-MM-YYYY format (like "09-08-2019")
-      if (typeof expirationDate === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(expirationDate)) {
-        // Convert DD-MM-YYYY to DD/MM/YYYY
-        expirationDate = expirationDate.replace(/-/g, '/');
-      } else if (typeof expirationDate === 'number' && expirationDate > 1000) {
-        // This is likely an Excel date serial number
-        const excelDate = new Date((expirationDate - 25569) * 86400 * 1000);
-        const day = String(excelDate.getDate()).padStart(2, '0');
-        const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-        const year = excelDate.getFullYear();
-        expirationDate = `${day}/${month}/${year}`; // Format as DD/MM/YYYY
-      } else if (typeof expirationDate === 'string' && /^\d{5,}$/.test(expirationDate)) {
-        // Handle case where Excel date is stored as string number
-        const excelDate = new Date((parseInt(expirationDate) - 25569) * 86400 * 1000);
-        const day = String(excelDate.getDate()).padStart(2, '0');
-        const month = String(excelDate.getMonth() + 1).padStart(2, '0');
-        const year = excelDate.getFullYear();
-        expirationDate = `${day}/${month}/${year}`; // Format as DD/MM/YYYY
-      }
+      expirationDate = normalizeExpirationForStorage(expirationDate);
       
       // Try different possible column names for each field - based on your Excel file
       const craneData = {

@@ -102,6 +102,52 @@
   box-shadow: 0 3px 8px rgba(255, 152, 0, 0.3);
 }
 
+/* Actions Header with Page Size Selector */
+.actions-header {
+  position: relative;
+}
+
+.actions-header-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.page-size-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.page-size-header-input {
+  width: 64px;
+  padding: 2px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.7rem;
+  text-align: center;
+  color: #333;
+}
+
+.page-size-header-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.page-size-header-text {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .crane-table {

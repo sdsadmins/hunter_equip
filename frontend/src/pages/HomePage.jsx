@@ -31,7 +31,7 @@ export default function HomePage() {
           const day = String(excelDate.getDate()).padStart(2, '0');
           const month = String(excelDate.getMonth() + 1).padStart(2, '0');
           const year = excelDate.getFullYear();
-          return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+          return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
         } catch (error) {
           return dateValue; // Return original if conversion fails
         }
@@ -46,7 +46,7 @@ export default function HomePage() {
         const day = String(excelDate.getDate()).padStart(2, '0');
         const month = String(excelDate.getMonth() + 1).padStart(2, '0');
         const year = excelDate.getFullYear();
-        return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+        return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
       } catch (error) {
         return dateValue.toString(); // Fallback to string if conversion fails
       }
@@ -60,11 +60,11 @@ export default function HomePage() {
     if (!expiration) return { status: "unknown", priority: 3, color: "gray" };
     
     try {
-      // Convert DD/MM/YYYY to Date object for comparison
+      // Convert MM/DD/YYYY to Date object for comparison
       const parts = expiration.split('/');
       if (parts.length === 3) {
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+        const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+        const day = parseInt(parts[1]);
         const year = parseInt(parts[2]);
         const expirationDate = new Date(year, month, day);
         const today = new Date();
@@ -99,8 +99,8 @@ export default function HomePage() {
         const partsA = a.expiration.split('/');
         const partsB = b.expiration.split('/');
         if (partsA.length === 3 && partsB.length === 3) {
-          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
-          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+          const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[0]) - 1, parseInt(partsA[1]));
+          const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[0]) - 1, parseInt(partsB[1]));
           return dateB - dateA;
         }
       } catch (error) {
@@ -119,24 +119,95 @@ export default function HomePage() {
       // Check for expiring cranes and create web alerts
       const today = new Date();
       const newAlerts = [];
+      // Group cranes by month and create monthly alerts
+      const monthlyCranes = {};
+      
       res.data.forEach((crane) => {
         try {
-          const expDate = new Date(crane.expiration);
-          const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-          if (diffDays > 0 && diffDays <= 4) {
-            newAlerts.push({
-              id: crane._id || Math.random(),
-              message: `⚠️ Crane ${crane.unit} expires in ${diffDays} day${diffDays > 1 ? 's' : ''}`,
-              type: diffDays <= 1 ? 'critical' : 'warning',
-              unit: crane.unit,
-              expiration: crane.expiration,
-              color: getExpirationStatus(crane.expiration).color
-            });
+          // Parse MM/DD/YYYY format correctly
+          const parts = crane.expiration.split('/');
+          if (parts.length === 3) {
+            const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+            const day = parseInt(parts[1]);
+            const year = parseInt(parts[2]);
+            const expDate = new Date(year, month, day);
+            const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+            
+            // Only include cranes expiring within 30 days (near to expire)
+            if (diffDays > 0 && diffDays <= 30) {
+              const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+              
+              if (!monthlyCranes[monthKey]) {
+                monthlyCranes[monthKey] = [];
+              }
+              
+              monthlyCranes[monthKey].push({
+                unit: crane.unit,
+                expiration: crane.expiration,
+                expDate: expDate,
+                diffDays: diffDays,
+                crane: crane
+              });
+            }
           }
         } catch (error) {
           console.warn(`Invalid date format for crane ${crane.unit}: ${crane.expiration}`);
         }
       });
+      
+      // Create alerts for each month - only show first crane in queue
+      Object.keys(monthlyCranes).forEach(monthKey => {
+        const cranes = monthlyCranes[monthKey];
+        const [year, month] = monthKey.split('-');
+        const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+        
+        // Sort cranes by expiration date (earliest first)
+        cranes.sort((a, b) => a.diffDays - b.diffDays);
+        
+        // Get the first crane in queue (earliest to expire)
+        const firstCrane = cranes[0];
+        const totalInMonth = cranes.length;
+        
+        let message, type;
+        
+        if (firstCrane.diffDays <= 7) {
+          // Expires within a week
+          message = `⚠️ ${monthName} ${year}: ${firstCrane.unit} expires in ${firstCrane.diffDays} day${firstCrane.diffDays > 1 ? 's' : ''} (${totalInMonth} total in queue)`;
+          type = 'critical';
+        } else {
+          // Expires later in month
+          message = `⚠️ ${monthName} ${year}: ${firstCrane.unit} expires in ${firstCrane.diffDays} days (${totalInMonth} total in queue)`;
+          type = 'warning';
+        }
+        
+        // Check if multiple cranes expire on the same day as the first one
+        const sameDayCranes = cranes.filter(c => c.diffDays === firstCrane.diffDays);
+        if (sameDayCranes.length > 1) {
+          const unitList = sameDayCranes.map(c => c.unit).join(', ');
+          message = `⚠️ ${monthName} ${year}: ${unitList} expire in ${firstCrane.diffDays} day${firstCrane.diffDays > 1 ? 's' : ''} (${totalInMonth} total in queue)`;
+        }
+        
+        newAlerts.push({
+          id: monthKey,
+          message: message,
+          type: type,
+          month: monthName,
+          year: year,
+          totalCranes: totalInMonth,
+          nextCrane: firstCrane.unit,
+          diffDays: firstCrane.diffDays,
+          allCranes: cranes,
+          color: getExpirationStatus(firstCrane.expiration).color
+        });
+      });
+      
+      // Sort alerts by urgency (closest to expiration first)
+      newAlerts.sort((a, b) => a.diffDays - b.diffDays);
+      
+      // Debug: Log the count of near-to-expire cranes
+      const totalNearToExpire = newAlerts.reduce((sum, alert) => sum + alert.totalCranes, 0);
+      console.log(`🔔 Alert Count: ${newAlerts.length} months with ${totalNearToExpire} cranes near to expire`);
+      
       setAlerts(newAlerts);
     } catch (err) {
       console.error("Error loading notifications:", err);
@@ -260,15 +331,14 @@ export default function HomePage() {
       {alerts.length > 0 && (
         <div className="web-alerts-home">
           <div className="alert-icon">🔔</div>
-          <div className="alert-count">{alerts.length}</div>
+          <div className="alert-count">
+            {alerts.reduce((sum, alert) => sum + alert.totalCranes, 0)}
+          </div>
           <div className="alert-dropdown">
             {alerts.map((alert) => (
               <div key={alert.id} className={`alert-item ${alert.type}`}>
                 <div className="alert-content">
                   <span className="alert-message">{alert.message}</span>
-                  <span className="alert-expiration" style={{ color: alert.color }}>
-                    ({alert.expiration})
-                  </span>
                 </div>
               </div>
             ))}

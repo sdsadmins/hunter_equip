@@ -5,6 +5,47 @@
   position: relative;
 }
 
+/* Page Size Control Styles */
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 15px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.page-size-label {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+}
+
+.page-size-input {
+  width: 50px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  text-align: center;
+  color: #333;
+}
+
+.page-size-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.page-size-text {
+  font-size: 0.9rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
 .supervisor-dashboard {
   min-height: 100vh;
   padding: 0;
@@ -1145,7 +1186,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 20px;
-  padding: 20px 30px;
+  padding: 30px 30px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1161,7 +1202,7 @@
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 20px;
 }
 
 .pagination-btn {
@@ -1174,7 +1215,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s ease;
-  min-width: 40px;
+  min-width: 50px;
   text-align: center;
 }
 
@@ -1234,7 +1275,7 @@
   .pagination-btn {
     padding: 6px 10px;
     font-size: 0.85rem;
-    min-width: 35px;
+    min-width: 50px;
   }
   
   .pagination-numbers {
@@ -1250,7 +1291,7 @@
   .pagination-btn {
     padding: 5px 8px;
     font-size: 0.8rem;
-    min-width: 30px;
+    min-width: 50px;
   }
   
   .pagination-info {

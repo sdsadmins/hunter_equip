@@ -55,7 +55,7 @@ export default function CraneTable({ cranes, onEdit, onDelete, onEmailAlert }) {
                             const day = String(excelDate.getDate()).padStart(2, '0');
                             const month = String(excelDate.getMonth() + 1).padStart(2, '0');
                             const year = excelDate.getFullYear();
-                            return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+                            return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
                           } catch (error) {
                             return dateValue; // Return original if conversion fails
                           }
@@ -70,7 +70,7 @@ export default function CraneTable({ cranes, onEdit, onDelete, onEmailAlert }) {
                           const day = String(excelDate.getDate()).padStart(2, '0');
                           const month = String(excelDate.getMonth() + 1).padStart(2, '0');
                           const year = excelDate.getFullYear();
-                          return `${day}/${month}/${year}`; // Format as DD/MM/YYYY
+                          return `${month}/${day}/${year}`; // Format as MM/DD/YYYY
                         } catch (error) {
                           return dateValue.toString(); // Fallback to string if conversion fails
                         }
