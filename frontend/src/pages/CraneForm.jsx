@@ -282,15 +282,15 @@ export default function CraneForm({ crane, onSave, onClose }) {
               type="text"
               placeholder="e.g., C-157"
               value={form["Unit #"]}
-              onChange={crane ? undefined : handleChange}
+              onChange={handleChange}
               required
-              readOnly={crane ? true : false}
+             
               style={{ 
                 border: '1px solid #ccc',
                 backgroundColor: crane ? '#f8f9fa' : '#e8f5e8',
                 color: crane ? '#495057' : '#2c5aa0',
                 fontWeight: '600',
-                cursor: crane ? 'not-allowed' : 'text'
+             
               }}
             />
           </div>
