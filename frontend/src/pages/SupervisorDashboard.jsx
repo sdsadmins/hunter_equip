@@ -847,33 +847,43 @@ export default function SupervisorDashboard() {
       
       if (otherFieldMatch) return true;
       
-      // 5. Date searching - check if search term looks like a date
-      if (search.includes('/') && search.length >= 8) {
-        try {
-          const searchDate = search.trim();
-          const craneExpiration = convertExcelDate(crane.Expiration);
-          
-          // Check if the search date matches the crane's expiration date
-          if (craneExpiration && craneExpiration.includes(searchDate)) {
-            return true;
-          }
-          
-          // Also check if the search date is contained within the expiration date
-          if (craneExpiration && craneExpiration.includes(searchDate.substring(0, 5))) {
-            return true;
-          }
-          
-          // Check for year-only search (e.g., "2025")
-          if (search.length === 4 && /^\d{4}$/.test(search)) {
-            if (craneExpiration && craneExpiration.includes(search)) {
-              return true;
-            }
-          }
-        } catch (error) {
-          // If date parsing fails, continue with other search criteria
+// 5. Date searching - check if search term looks like a date
+if (search.includes('/') && search.length >= 5) {  // allow MM/DD too
+  try {
+    const craneDate = new Date(convertExcelDate(crane.Expiration)); // expiration
+
+    if (!isNaN(craneDate)) {
+      // Helper: format date as MM/DD/YYYY
+      const formatDate = (d) => {
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${mm}/${dd}/${yyyy}`;
+      };
+
+      const craneFormatted = formatDate(craneDate); // "11/05/2025"
+
+      // 1. Full exact date match (MM/DD/YYYY)
+      if (search.length >= 8 && craneFormatted === search.trim()) {
+        return true;
+      }
+
+      // 2. Month/Day match (MM/DD)
+      if (search.length === 5) {
+        const [sMonth, sDay] = search.split('/');
+        const cMonth = String(craneDate.getMonth() + 1).padStart(2, '0');
+        const cDay = String(craneDate.getDate()).padStart(2, '0');
+
+        if (sMonth.padStart(2, '0') === cMonth && sDay.padStart(2, '0') === cDay) {
+          return true;
         }
       }
-      
+    }
+  } catch (error) {
+    // If date parsing fails, continue with other search criteria
+  }
+}
+
       return false;
     })
     .sort((a, b) => {

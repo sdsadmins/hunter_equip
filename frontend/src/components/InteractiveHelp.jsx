@@ -293,7 +293,7 @@ export default function InteractiveHelp() {
             '• Expiration Date - Inspection due date',
             '',
             '📅 EXPIRATION DATE RULES:',
-            '• Must be in DD/MM/YYYY format (e.g., 15/12/2025)',
+            '• Must be in MM/DD/YYYY format (e.g., 12/15/2025)',
             '• Must be a FUTURE date (not past)',
             '• System will reject invalid dates',
             '• Leave empty if not known (can be added later)',
@@ -306,7 +306,7 @@ export default function InteractiveHelp() {
           tips: [
             '💡 Unit # and Make & Model are required',
             '💡 Expiration date must be in the future',
-            '💡 Use DD/MM/YYYY format for dates',
+            '💡 Use MM/DD/YYYY format for dates',
             '💡 You can edit the crane later if needed'
           ],
           showOnlyRelevant: true,
@@ -329,7 +329,7 @@ export default function InteractiveHelp() {
             '• Expiration Date - Change inspection date',
             '',
             '📅 EXPIRATION DATE RULES:',
-            '• Must be in DD/MM/YYYY format (e.g., 15/12/2025)',
+            '• Must be in MM/DD/YYYY format (e.g., 12/15/2025)',
             '• Must be a FUTURE date (not past)',
             '• System will reject past dates',
             '• Status will update automatically after saving',
@@ -347,7 +347,7 @@ export default function InteractiveHelp() {
           ],
           tips: [
             '💡 Expiration date must be in the future',
-            '💡 Use DD/MM/YYYY format for dates',
+            '💡 Use MM/DD/YYYY format for dates',
             '💡 Changes are saved immediately',
             '💡 Status colors update automatically'
           ],
@@ -433,13 +433,13 @@ export default function InteractiveHelp() {
           '   • Make and Model',
           '   • Ton',
           '   • Serial #',
-          '   • Expiration (DD/MM/YYYY format)',
+          '   • Expiration (MM/DD/YYYY format)',
           '5. Click "Upload" button',
           '6. Review the results and confirm'
         ],
         tips: [
           '💡 Excel file should be .xlsx or .xls format',
-          '💡 Date format must be DD/MM/YYYY (e.g., 25/12/2024)',
+          '💡 Date format must be MM/DD/YYYY (e.g., 12/25/2024)',
           '💡 Remove empty rows from your Excel file',
           '💡 Make sure column names match exactly'
         ]
@@ -483,7 +483,7 @@ export default function InteractiveHelp() {
           '   • Unit # (exact match gets priority)',
           '   • Make and Model',
           '   • Serial #',
-          '   • Year',
+          '   • Particular Date (MM/DD) or(MM/DD/YYYY)',
           '   • Ton capacity',
           '3. Use filters:',
           '   • Month filter: Enter "Jan", "Feb", or "1", "2"',
@@ -514,12 +514,13 @@ export default function InteractiveHelp() {
           '   • Serial #',
           '   • Expiration date (DD/MM/YYYY)',
           '   • Currently In Use (Yes/No)',
+          '   • Add Email for Alerts',
           '3. Click "Save" button',
           '4. The crane will appear in your dashboard'
         ],
         tips: [
           '💡 Unit # must be unique - no duplicates allowed',
-          '💡 Use DD/MM/YYYY format for expiration date',
+          '💡 Use MM/DD/YYYY format for expiration date',
           '💡 Mark "Currently In Use" as Yes if crane is active',
           '💡 You can edit crane details later'
         ]
@@ -670,9 +671,9 @@ export default function InteractiveHelp() {
           'Here\'s everything you need to know about expiration dates:',
           '',
           '📅 DATE FORMAT:',
-          '• Use format: DD/MM/YYYY',
-          '• Example: 15/12/2025 (15th December 2025)',
-          '• Don\'t use: 12/15/2025 or 2025-12-15',
+          '• Use format: MM/DD/YYYY',
+          '• Example: 12/15/2025 (15th December 2025)',
+          '• Don\'t use: 15/12/2025 or 2025-12-15',
           '',
           '⚠️ IMPORTANT RULES:',
           '• Expiration date MUST be in the FUTURE',
@@ -688,13 +689,13 @@ export default function InteractiveHelp() {
           '✏️ HOW TO UPDATE:',
           '1. Click edit icon next to any crane',
           '2. Change the expiration date field',
-          '3. Use DD/MM/YYYY format',
+          '3. Use MM/DD/YYYY format',
           '4. Make sure it\'s a future date',
           '5. Click Save to update',
           '6. Status will update immediately'
         ],
         tips: [
-          '💡 Always use DD/MM/YYYY format',
+          '💡 Always use MM/DD/YYYY format',
           '💡 Future dates only - no past dates allowed',
           '💡 System automatically calculates days remaining',
           '💡 Updated status shows immediately after saving'
@@ -771,18 +772,14 @@ export default function InteractiveHelp() {
           '2. Find the crane you want to delete in the table',
           '3. Click the delete icon (🗑️) next to that crane',
           '4. A confirmation dialog will appear',
-          '5. Enter the secret code: ',
-          '6. Click "Confirm Delete"',
-          '7. The crane will be permanently removed',
+          '5. The crane will be permanently removed',
           '',
           '⚠️ IMPORTANT WARNINGS:',
           '• This action cannot be undone',
           '• The crane data will be permanently deleted',
           '• Make sure you really want to delete it',
-          '• You need the secret code to proceed'
         ],
         tips: [
-          '💡 Secret code is required for security',
           '💡 Deleted cranes cannot be recovered',
           '💡 Consider editing instead of deleting if you just need to update info'
         ]
@@ -807,7 +804,7 @@ export default function InteractiveHelp() {
           '   • Make and Model (e.g., TADANO GR1600XL-3)',
           '   • Ton (e.g., 160 TON)',
           '   • Serial # (e.g., FE5144)',
-          '   • Expiration Date (DD/MM/YYYY format)',
+          '   • Expiration Date (MM/DD/YYYY format)',
           '5. Click "Save" to add the crane',
           '6. The crane will appear in your dashboard',
           '',
@@ -820,7 +817,7 @@ export default function InteractiveHelp() {
         tips: [
           '💡 Manual entry is good for single cranes',
           '💡 Excel upload is better for multiple cranes',
-          '💡 Expiration date must be in DD/MM/YYYY format',
+          '💡 Expiration date must be in MM/DD/YYYY format',
           '💡 All fields are required'
         ]
       };
@@ -849,7 +846,7 @@ export default function InteractiveHelp() {
           '7. Changes will appear immediately in the dashboard',
           '',
           '📅 EXPIRATION DATE RULES:',
-          '• Must be in DD/MM/YYYY format',
+          '• Must be in MM/DD/YYYY format',
           '• Must be a future date (not past)',
           '• System will reject invalid dates',
           '• Status will update automatically after saving'
@@ -1051,7 +1048,7 @@ export default function InteractiveHelp() {
           '6. Click Upload and review results'
         ],
         tips: [
-          '💡 Date format must be DD/MM/YYYY (like 25/12/2024)',
+          '💡 Date format must be MM/DD/YYYY (like 12/25/2024)',
           '💡 Remove empty rows from your Excel file first'
         ]
       };
